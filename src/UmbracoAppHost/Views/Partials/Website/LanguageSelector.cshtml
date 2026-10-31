@@ -1,0 +1,10 @@
+@inherits UmbracoViewPage
+@using System.Globalization
+@* Links to the page's other cultures, on a site that has a domain for each. *@
+@foreach (var culture in Model.Cultures.Keys.Where(key => !string.IsNullOrWhiteSpace(key)))
+{
+    if (Model.GetCultureFromDomains() is { } current && !string.Equals(current, culture, StringComparison.OrdinalIgnoreCase))
+    {
+        <a href="@Model.Url(culture)" lang="@culture" hreflang="@culture">@(new CultureInfo(culture).NativeName)</a>
+    }
+}

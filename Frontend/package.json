@@ -1,0 +1,39 @@
+{
+  "name": "umbracoapphost-frontend",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Website and application frontend for UmbracoAppHost on Umbraco 18. Builds assets into dist/ and generates Razor views from HTML templates.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "build:dev": "node build.mjs --dev",
+    "watch": "node build.mjs --dev --watch",
+    "start": "node build.mjs --dev --serve",
+    "check": "tsc --noEmit -p jsconfig.json",
+    "test": "node --test test/application-blocks.mjs test/templates.mjs test/website.mjs",
+    "test:blocks": "node --test test/application-blocks.mjs",
+    "capture": "node capture.mjs",
+    "templates": "node templates.mjs",
+    "templates:emit": "node templates.mjs --emit",
+    "templates:check": "node templates.mjs --check",
+    "clean": "node build.mjs --clean"
+  },
+  "browserslist": [
+    ">= 0.5% and supports avif",
+    "last 2 major versions and supports avif",
+    "not dead",
+    "not Explorer <= 11"
+  ],
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "esbuild": "^0.28.2",
+    "jsdom": "^29.1.1",
+    "postcss": "^8.5.6",
+    "sass": "^1.102.0",
+    "typescript": "^5.9.3"
+  }
+}

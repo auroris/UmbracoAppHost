@@ -1,0 +1,33 @@
+// The website theme: a site's public face, in the spirit of a starter site. A top bar with the site's name
+// and menu, a hero on the home page, a quiet heading band on other pages, clean typography, and a footer.
+// Retheme a site by overriding the custom properties below from its own stylesheet.
+
+:root {
+  --site-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --site-mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  --site-ink: #1c2434;
+  --site-muted: #566074; // above 4.5:1 on the surfaces below
+  --site-surface: #ffffff;
+  --site-surface-alt: #f4f5fa;
+  --site-border: #dde1eb;
+  --site-input-border: #767f92;
+  --site-accent: #3545a8;
+  --site-accent-dark: #252f7c;
+  --site-accent-soft: #e8eafa;
+  --site-accent-text: #ffffff;
+  --site-danger: #8c2020;
+  --site-radius: 0.5rem;
+  --site-width: 72rem;
+  --site-gutter: clamp(1rem, 4vw, 2rem);
+  --site-shadow: 0 1px 3px rgba(28, 36, 52, 0.08), 0 8px 24px rgba(28, 36, 52, 0.06);
+}
+
+// The width the menu collapses at and block columns stack at.
+$site-narrow: 47.99rem;
+$site-wide: 48rem;
+
+@import "base";
+@import "shell";
+@import "scss/site/blockgridlayout";
+@import "blocks";
+@import "scss/components/forms";

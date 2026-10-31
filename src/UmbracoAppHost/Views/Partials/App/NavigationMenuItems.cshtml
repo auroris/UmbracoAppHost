@@ -1,0 +1,24 @@
+@model IEnumerable<UmbracoAppHost.Website.SiteMenuEntry>
+@* The authored menu after SiteMenu replaced the visitor's tokens. A sign-out entry posts the application's sign-out form. *@
+@foreach (var item in Model)
+{
+    var current = item.Url is not null && string.Equals(item.Url, Context.Request.PathBase + Context.Request.Path, StringComparison.OrdinalIgnoreCase);
+    <li class="app-nav-item@(current ? " is-current" : null)@(item.Children.Count > 0 ? " is-open" : null)">
+        @if (item.SignsOut)
+        {
+            <form method="post" action="@item.Url">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString)" />
+                <button type="submit">@item.Label</button>
+            </form>
+        }
+        else
+        {
+            <a href="@item.Url" target="@item.Target" rel="@(item.Target == "_blank" ? "noopener" : null)" aria-current="@(current ? "page" : null)">@item.Label</a>
+        }
+        @if (item.Children.Count > 0)
+        {
+            <ul class="app-nav-list"><partial name="App/NavigationMenuItems" model="item.Children" /></ul>
+        }
+    </li>
+}

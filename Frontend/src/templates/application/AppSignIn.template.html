@@ -1,0 +1,31 @@
+{{! The layout an application page takes when nobody is signed in: the header without a menu,
+    and one card offering the sign-in providers. The page's own body is ignored. }}
+{{# razor }}
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage
+@{
+    Layout = null;
+    PageAssets.RegisterPage(Model, NavigationQueryService, PublishedStatusFilteringService, Context);
+    IgnoreBody();
+    var application = Model.SiteRoot(NavigationQueryService, PublishedStatusFilteringService);
+}
+{{# endrazor }}
+<!doctype html>
+<html lang="{{ razor 'Model.GetCultureFromDomains()' }}">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ razor 'application.NavigationTitle()' }}</title>
+    {{ styles "app" }}
+</head>
+<body class="app app-signin-page">
+    {{ partial "App/Header" }}
+    <main class="app-main app-main-centered" id="main">
+        <section class="app-card app-signin">
+            <h1 class="app-card-title">{{ razor 'application.NavigationTitle()' }}</h1>
+            <p>{{ dict "app-signin-prompt" default="Sign in to use this application." }}</p>
+            {{ partial "App/SignIn" }}
+        </section>
+    </main>
+    {{ partial "App/Footer" }}
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "$schema": "../../umbraco-package-schema.json",
+  "name": "Back Office Experience",
+  "alias": "BackOfficeExperience",
+  "version": "1.0.0",
+  "allowPublicAccess": true,
+  "extensions": [
+    {
+      "type": "backofficeEntryPoint",
+      "alias": "BackOfficeExperience.Backoffice",
+      "name": "Back office dashboard setup",
+      "js": "/App_Plugins/BackOfficeExperience/backoffice.js"
+    },
+    {
+      "type": "dashboard",
+      "alias": "BackOfficeExperience.Dashboard.Welcome",
+      "name": "Welcome dashboard",
+      "element": "/App_Plugins/BackOfficeExperience/welcome-dashboard.js",
+      "weight": 30,
+      "meta": {
+        "label": "Welcome",
+        "pathname": "welcome"
+      },
+      "conditions": [
+        {
+          "alias": "Umb.Condition.SectionAlias",
+          "match": "Umb.Section.Content"
+        }
+      ]
+    }
+  ]
+}

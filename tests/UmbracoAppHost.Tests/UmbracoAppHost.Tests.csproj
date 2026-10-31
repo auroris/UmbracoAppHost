@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <ProjectReference Include="../../src/UmbracoAppHost.Web/UmbracoAppHost.Web.csproj" />
+    <ProjectReference Include="../UmbracoAppHost.Testing/UmbracoAppHost.Testing.csproj" />
+    <Using Include="Xunit" />
+    <Using Include="UmbracoAppHost.Testing" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,7 @@
+/* Keep long page names and content paths readable in the backoffice's narrower workspace. */
+.ir-table th,
+.ir-table td {
+    white-space: normal;
+    overflow-wrap: break-word;
+    vertical-align: top;
+}

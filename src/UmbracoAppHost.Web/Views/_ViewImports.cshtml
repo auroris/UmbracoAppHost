@@ -1,0 +1,19 @@
+@using Umbraco.Extensions
+@using Umbraco.Cms.Web.Common.Views
+@using Umbraco.Cms.Core.Models
+@using Umbraco.Cms.Core.Models.Blocks
+@using Umbraco.Cms.Core.Models.PublishedContent
+@using Umbraco.Cms.Core.Services.Navigation
+@using Microsoft.AspNetCore.Html
+@using UmbracoAppHost.Authentication
+@using UmbracoAppHost.Application
+@using UmbracoAppHost.Website
+@using AppBlocks.Authentication
+@using AppBlocks.Publishing
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@inject SiteVisitor Visitor
+@inject UmbracoAppHost.Website.SiteMenu SiteMenu
+@inject IDocumentNavigationQueryService NavigationQueryService
+@inject IPublishedContentStatusFilteringService PublishedStatusFilteringService
+@inject AppBlocks.Blocks.AppPageAssets PageAssets
+@inject Umbraco.Cms.Core.Services.ITemplateService TemplateService

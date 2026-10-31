@@ -1,0 +1,26 @@
+{
+  "$comment": "Mock data for local template rendering. Node cannot execute Razor, so every directive resolves against this file when compiling demo/pages/*.html. The partial entries are canned HTML; keep them faithful to what the Razor partials under Views/Partials/Website emit.",
+  "layouts": {},
+  "origin": "http://localhost:5080",
+  "values": {},
+  "dictionary": {
+    "datemodified": "Date modified",
+    "editthispage": "Edit this page"
+  },
+  "razor": {
+    "Model.GetCultureFromDomains()": "en",
+    "Model.PageTitle()": "Welcome to the demo",
+    "Model.WriterName()": "Local Development",
+    "pageUpdateDate.ToString(\"s\")": "2026-10-31T09:00:00",
+    "site.NavigationTitle()": "Demo site",
+    "pageUpdateDate.ToString(\"yyyy-MM-dd\")": "2026-10-31",
+    "Context.Request.PathBase": ""
+  },
+  "partials": {
+    "Website/Brand": "<a class=\"site-brand\" href=\"#\">Demo site</a>",
+    "Website/Menu": "<ul class=\"site-menu\"><li><a href=\"#\" aria-current=\"page\">Home</a></li><li><a href=\"#\">About</a></li><li class=\"has-submenu\"><a>Examples</a><button type=\"button\" class=\"site-submenu-toggle\" aria-expanded=\"false\"><span class=\"visually-hidden\">Examples</span></button><ul><li><a href=\"#\">Layouts</a></li><li><a href=\"#\">Content blocks</a></li></ul></li></ul>",
+    "Website/PageHead": "<section class=\"site-hero\"><div class=\"site-container\"><p class=\"site-hero__kicker\">Demo site</p><h1 class=\"site-hero__title\">Welcome to the demo</h1></div></section>",
+    "Website/Aside": ""
+  },
+  "body": "<div class=\"site-intro\"><p>A short introduction to the site, shown beneath the hero.</p></div><p><a class=\"btn btn-primary\" href=\"#\">Open the backoffice</a></p><ul class=\"app-cards\"><li class=\"app-card\"><a href=\"#\"><span class=\"app-card-kind\">Page</span><span class=\"app-card-title\">Layouts</span></a></li><li class=\"app-card\"><a href=\"#\"><span class=\"app-card-kind\">Page</span><span class=\"app-card-title\">Content blocks</span></a></li></ul>"
+}

@@ -1,0 +1,11 @@
+@inherits UmbracoViewPage
+@inject UmbracoAppHost.Themes.SiteThemeCatalog Themes
+@{
+    PageAssets.RegisterPage(Model, NavigationQueryService, PublishedStatusFilteringService, Context);
+    await Visitor.ResolveAsync();
+    Layout = (await Themes.ResolveForAsync(Model, NavigationQueryService, PublishedStatusFilteringService, TemplateService)).LayoutFor(Visitor.IsSignedIn);
+}
+@if (Visitor.IsSignedIn)
+{
+    @await Component.InvokeAsync("AppBlocks", new { page = Model })
+}

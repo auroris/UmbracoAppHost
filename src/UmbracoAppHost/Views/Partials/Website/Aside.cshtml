@@ -1,0 +1,6 @@
+@inherits UmbracoViewPage
+@* A page's own sidebar text. Without any, the article takes the whole width. *@
+@if (Model.HasValue("sidebarContent"))
+{
+    <aside class="site-aside">@Model.Value("sidebarContent")</aside>
+}

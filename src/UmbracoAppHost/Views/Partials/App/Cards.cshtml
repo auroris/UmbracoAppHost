@@ -1,0 +1,19 @@
+@inherits UmbracoViewPage
+@{
+    var items = Model.VisibleChildren(NavigationQueryService, PublishedStatusFilteringService).ToList();
+}
+@if (items.Count > 0)
+{
+    <ul class="app-cards">
+        @foreach (var item in items)
+        {
+            <li class="app-card">
+                <a href="@item.NavigationUrl()">
+                    @* reportPage is the base's Report Page type; everything else is an application page. *@
+                    <span class="app-card-kind">@(item.ContentType.Alias == "reportPage" ? "Report" : "Page")</span>
+                    <span class="app-card-title">@item.NavigationTitle()</span>
+                </a>
+            </li>
+        }
+    </ul>
+}

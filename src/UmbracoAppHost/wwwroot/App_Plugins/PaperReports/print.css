@@ -1,0 +1,2 @@
+/* Compatibility URL for templates authored before Documents became a companion package. */
+@import "../AppBlocks.Documents/print.css";

@@ -1,0 +1,15 @@
+@inherits UmbracoViewPage
+@using Umbraco.Cms.Core.PropertyEditors.ValueConverters
+@{
+    var site = Model.SiteRoot(NavigationQueryService, PublishedStatusFilteringService);
+    // The site's graphic, from the page or its nearest ancestor that has one.
+    var graphic = Model.Value<ImageCropperValue>("badge", fallback: Fallback.ToAncestors);
+    var source = graphic is { Src.Length: > 0 } ? (graphic.Src.StartsWith('/') && !graphic.Src.StartsWith("//") ? "~" + graphic.Src : graphic.Src) : null;
+}
+<a class="site-brand" href="@site.NavigationUrl()">
+    @if (source is not null)
+    {
+        <img class="site-brand__logo" src="@Url.Content(source)" alt="" />
+    }
+    <span>@site.NavigationTitle()</span>
+</a>

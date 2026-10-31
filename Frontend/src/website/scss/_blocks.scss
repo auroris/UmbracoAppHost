@@ -1,0 +1,330 @@
+// AppBlocks' output on this theme. The block partials emit one neutral markup for every theme: `ah-grid` and
+// `ah-grid__item` for each grid of blocks, `ah-layout` and `ah-area` for the column layouts, `ah-region` for
+// APEX's region, `ah-rich-text` for rich text. They carry the spans as Umbraco's own custom properties, and
+// the shared grid stylesheet does the column arithmetic. A field's width is its grid span and needs no rule.
+
+// The shared forms, attachments, tabular and schedule styles read these.
+.application-blocks {
+  --ah-surface: var(--site-surface);
+  --ah-surface-alt: var(--site-surface-alt);
+  --ah-ink: var(--site-ink);
+  --ah-muted: var(--site-muted);
+  --ah-border: var(--site-border);
+  --ah-input-border: var(--site-input-border);
+  --ah-radius: var(--site-radius);
+  --ah-accent: var(--site-accent);
+}
+
+// Twelve tracks have eleven gaps whatever the blocks span, so a fixed gutter alone would overflow a narrow
+// grid, such as a fieldset in a region. The column gap is therefore capped at 3% of the grid's width.
+.ah-grid {
+  --umb-block-grid--column-gap: min(1.5rem, 3%);
+  --umb-block-grid--row-gap: 1rem;
+}
+
+.ah-layout {
+  --umb-block-grid--areas-column-gap: min(1.5rem, 3%);
+  --umb-block-grid--areas-row-gap: 1rem;
+}
+
+.application-blocks > .ah-grid {
+  --umb-block-grid--row-gap: 1.5rem;
+}
+
+// A grid track never grows for its content, so a wide report scrolls inside its column.
+.ah-grid__item,
+.ah-area {
+  min-width: 0;
+}
+
+// Spans apply wherever the page has room. Umbraco's stylesheet only applies them from 1024px and triples them below.
+.ah-grid > .ah-grid__item {
+  grid-column-end: span min(var(--umb-block-grid--item-column-span, 1), var(--umb-block-grid--grid-columns));
+}
+
+.ah-layout > .ah-area {
+  grid-column-end: span min(var(--umb-block-grid--area-column-span, 1), var(--umb-block-grid--area-grid-columns));
+}
+
+// On a narrow screen every block and area takes the full width, so no column gap is needed.
+@media (max-width: $site-narrow) {
+  .ah-grid,
+  .application-blocks > .ah-grid {
+    --umb-block-grid--column-gap: 0px;
+  }
+
+  .ah-layout {
+    --umb-block-grid--areas-column-gap: 0px;
+  }
+
+  .ah-grid > .ah-grid__item {
+    grid-column-end: span var(--umb-block-grid--grid-columns, 12);
+  }
+
+  .ah-layout > .ah-area {
+    grid-column-end: span var(--umb-block-grid--area-grid-columns, 12);
+  }
+}
+
+// Region: a card with a title bar ------------------------------------------------------------
+
+.ah-region {
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+}
+
+.ah-region__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--site-surface-alt);
+  border-bottom: 1px solid var(--site-border);
+  border-radius: calc(var(--site-radius) - 1px) calc(var(--site-radius) - 1px) 0 0;
+}
+
+.ah-region__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.ah-region__body {
+  padding: 1.25rem;
+}
+
+// Collapsible: a details element. Its own marker differs between browsers, so draw a chevron that
+// points right when closed and down when open.
+details.ah-region > summary {
+  cursor: pointer;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::before {
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin: 0 0.25rem 0 0.1rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+    content: "";
+  }
+
+  &:hover .ah-region__title {
+    color: var(--site-accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--site-accent);
+    outline-offset: -2px;
+  }
+}
+
+details.ah-region[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+details.ah-region:not([open]) > summary {
+  border-bottom: 0;
+  border-radius: calc(var(--site-radius) - 1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  details.ah-region > summary::before {
+    transition: none;
+  }
+}
+
+// Rich text: the site's own typography, without the outer margins that would double the grid's gaps ---------
+
+.ah-rich-text {
+  overflow-wrap: break-word;
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+
+  table {
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--site-border);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: var(--site-surface-alt);
+  }
+}
+
+// A placeholder is a hint, never the label, but it must still be legible on the field's white.
+.app-form-field ::placeholder {
+  color: var(--site-muted);
+  opacity: 1;
+}
+
+// Forms: the fields and their labels ----------------------------------------------------------
+
+.application-blocks .app-form-field :is(input:not([type=checkbox]), select, textarea) {
+  width: 100%;
+}
+
+// A select ignores line height, so give the single-line fields one height.
+.application-blocks .app-form-field :is(input:not([type=checkbox]), select) {
+  min-height: 2.75rem;
+}
+
+.application-blocks .app-form-actions button,
+.application-blocks .ah-tabular__toolbar button,
+.application-blocks .app-tabular-actions button,
+.application-blocks .app-attachment-actions button,
+.application-blocks .app-attachments-upload button {
+  font-weight: 600;
+}
+
+// A file input keeps its own wide minimum, which would push a narrow page sideways.
+.application-blocks .app-attachments-upload {
+  max-width: 100%;
+
+  > *,
+  :is(input, select) {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+// The table's visually hidden labels are positioned, so without this they escape the scrolling and widen the page.
+.application-blocks .ah-tabular__scroll {
+  position: relative;
+}
+
+// Reports: a card that scrolls a wide table inside itself ----------------------------------------
+
+.app-report {
+  padding: 0.75rem;
+  overflow-x: auto;
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+}
+
+// A page's children as cards, on a site without blocks ---------------------------------------------
+
+.app-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.app-card {
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: var(--site-accent);
+    box-shadow: var(--site-shadow);
+  }
+
+  a {
+    display: block;
+    height: 100%;
+    padding: 1.25rem;
+    text-decoration: none;
+  }
+}
+
+.app-card-kind {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--site-muted);
+}
+
+.app-card-title {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 1.1875rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+// Sign-in ---------------------------------------------------------------------------------------
+
+.app-signin {
+  width: 100%;
+  max-width: 28rem;
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  box-shadow: var(--site-shadow);
+
+  form {
+    margin: 0 0 0.75rem;
+  }
+
+  input:not([type="hidden"]) {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid var(--site-input-border);
+    border-radius: var(--site-radius);
+    background: var(--site-surface);
+    color: var(--site-ink);
+  }
+}
+
+.app-login-form {
+  display: grid;
+  gap: 0.5rem;
+
+  .app-button {
+    justify-self: start;
+    margin-top: 0.5rem;
+  }
+}
+
+.app-login-errors {
+  color: var(--site-danger);
+
+  &.validation-summary-valid {
+    display: none;
+  }
+}
+
+.app-signin-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  color: var(--site-muted);
+}
+
+.app-denied {
+  margin: 0 0 1rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #f2c4bd;
+  border-radius: var(--site-radius);
+  background: #fdecea;
+  color: var(--site-danger);
+}

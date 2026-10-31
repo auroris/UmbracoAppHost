@@ -1,0 +1,21 @@
+@inherits UmbracoViewPage
+@{
+    var items = await SiteMenu.BuildAsync(Model, NavigationQueryService, PublishedStatusFilteringService);
+    var site = Model.SiteRoot(NavigationQueryService, PublishedStatusFilteringService);
+}
+@* The site's authored menu; without one, the site and the pages directly beneath it. *@
+<ul class="site-menu">
+    @if (items.Count > 0)
+    {
+        <partial name="Website/MenuItems" model="items" />
+    }
+    else
+    {
+        <li><a href="@site.NavigationUrl()" aria-current="@(site.Key == Model.Key ? "page" : null)">@site.NavigationTitle()</a></li>
+        @foreach (var entry in site.VisibleChildren(NavigationQueryService, PublishedStatusFilteringService))
+        {
+            <li><a href="@entry.NavigationUrl()" aria-current="@(entry.Key == Model.Key ? "page" : null)">@entry.NavigationTitle()</a></li>
+        }
+    }
+    <li class="site-languages"><partial name="Website/LanguageSelector" /></li>
+</ul>

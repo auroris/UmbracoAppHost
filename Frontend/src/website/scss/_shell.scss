@@ -1,0 +1,461 @@
+// The page around the content: top bar, menu, hero, heading band and footer.
+
+body.site {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.site-container {
+  width: 100%;
+  max-width: calc(var(--site-width) + 2 * var(--site-gutter));
+  margin-inline: auto;
+  padding-inline: var(--site-gutter);
+}
+
+.site-skip {
+  position: absolute;
+  left: -100vw;
+  top: 0;
+  z-index: 20;
+  padding: 0.5rem 1rem;
+  background: var(--site-surface);
+
+  &:focus {
+    left: 0;
+  }
+}
+
+// Top bar -------------------------------------------------------------------------------------
+
+.site-header {
+  background: var(--site-surface);
+  border-bottom: 1px solid var(--site-border);
+}
+
+.site-header__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: 2rem;
+  min-height: 4.25rem;
+}
+
+.site-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding-block: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--site-ink);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--site-accent);
+  }
+}
+
+.site-brand__logo {
+  display: block;
+  width: auto;
+  max-height: 2.5rem;
+}
+
+.site-nav-toggle {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: none;
+  color: var(--site-ink);
+  cursor: pointer;
+}
+
+.site-nav-toggle__bars,
+.site-nav-toggle__bars::before,
+.site-nav-toggle__bars::after {
+  display: block;
+  width: 1.125rem;
+  height: 2px;
+  background: currentColor;
+}
+
+.site-nav-toggle__bars {
+  position: relative;
+
+  &::before,
+  &::after {
+    position: absolute;
+    left: 0;
+    content: "";
+  }
+
+  &::before {
+    top: -6px;
+  }
+
+  &::after {
+    top: 6px;
+  }
+}
+
+.site-languages {
+  font-size: 0.9375rem;
+}
+
+// Menu: a row of links, with submenus as panels ---------------------------------------------------
+
+.site-menu,
+.site-menu ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-menu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.25rem;
+
+  li {
+    position: relative;
+  }
+
+  form {
+    margin: 0;
+  }
+
+  a,
+  .site-menu__action {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    border: 0;
+    border-radius: var(--site-radius);
+    background: none;
+    color: var(--site-ink);
+    font-weight: 500;
+    line-height: 1.5;
+    text-decoration: none;
+  }
+
+  a[href],
+  .site-menu__action {
+    cursor: pointer;
+
+    &:hover {
+      background: var(--site-accent-soft);
+      color: var(--site-accent-dark);
+    }
+  }
+
+  // A group title or a "Signed in as" line is a label, with nowhere to go.
+  a:not([href]) {
+    color: var(--site-muted);
+  }
+
+  a[aria-current="page"] {
+    color: var(--site-accent);
+    font-weight: 700;
+  }
+
+  .has-submenu {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+
+    > a {
+      padding-right: 0.25rem;
+      cursor: pointer;
+    }
+  }
+}
+
+.site-submenu-toggle {
+  width: 2rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: var(--site-radius);
+  background: none;
+  color: var(--site-muted);
+  cursor: pointer;
+
+  &::before {
+    display: block;
+    width: 0.45rem;
+    height: 0.45rem;
+    margin: -0.15rem auto 0;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    content: "";
+  }
+
+  &:hover {
+    background: var(--site-accent-soft);
+  }
+}
+
+.has-submenu.is-open > .site-submenu-toggle::before {
+  margin-top: 0.15rem;
+  transform: rotate(225deg);
+}
+
+.site-menu .has-submenu > ul {
+  display: none;
+}
+
+.site-menu .has-submenu.is-open > ul {
+  display: block;
+}
+
+@media (min-width: $site-wide) {
+  .site-menu .has-submenu > ul {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 10;
+    min-width: 14rem;
+    padding: 0.375rem;
+    border: 1px solid var(--site-border);
+    border-radius: var(--site-radius);
+    background: var(--site-surface);
+    box-shadow: var(--site-shadow);
+  }
+
+  // Hover also opens it, without a gap for the pointer to fall through.
+  @media (hover: hover) {
+    .site-menu .has-submenu:hover > ul {
+      display: block;
+    }
+  }
+}
+
+// Narrow screens: the menu folds beneath the top bar. Without scripts it simply stays open.
+@media (max-width: $site-narrow) {
+  .js .site-nav-toggle {
+    display: inline-flex;
+  }
+
+  .site-nav {
+    width: 100%;
+    padding-bottom: 0.75rem;
+  }
+
+  .js .site-nav:not(.is-open) {
+    display: none;
+  }
+
+  .site-menu {
+    display: block;
+
+    a,
+    .site-menu__action {
+      width: 100%;
+      min-height: 2.75rem;
+      padding-block: 0.625rem;
+      text-align: left;
+    }
+
+    .has-submenu > a {
+      flex: 1 1 0;
+      width: auto;
+    }
+
+    .has-submenu > ul {
+      flex: 1 0 100%;
+      padding-left: 1rem;
+    }
+  }
+
+  .site-submenu-toggle {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
+// Hero and heading band -------------------------------------------------------------------------
+
+.site-hero {
+  background: linear-gradient(135deg, var(--site-accent-dark), var(--site-accent) 60%, #5361c4);
+  color: var(--site-accent-text);
+  padding-block: clamp(3rem, 8vw, 6rem);
+}
+
+.site-hero__kicker {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.site-hero__title {
+  max-width: 22ch;
+  margin: 0;
+  font-size: clamp(2.25rem, 1.5rem + 3.5vw, 3.75rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.site-page-head {
+  padding-block: clamp(1.5rem, 4vw, 2.5rem);
+  background: var(--site-surface-alt);
+  border-bottom: 1px solid var(--site-border);
+
+  h1 {
+    margin: 0;
+  }
+}
+
+.site-breadcrumb {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--site-muted);
+
+  ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.375rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li + li::before {
+    margin-right: 0.375rem;
+    content: "/";
+  }
+
+  a {
+    color: inherit;
+  }
+}
+
+.site-section-nav {
+  margin-top: 1rem;
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  a {
+    display: block;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--site-border);
+    border-radius: 999px;
+    background: var(--site-surface);
+    font-size: 0.875rem;
+    text-decoration: none;
+
+    &:hover {
+      border-color: var(--site-accent);
+    }
+
+    &[aria-current="page"] {
+      border-color: var(--site-accent);
+      background: var(--site-accent);
+      color: var(--site-accent-text);
+    }
+  }
+}
+
+// Content and footer ---------------------------------------------------------------------------
+
+.site-main {
+  flex: 1;
+  padding-block: clamp(1.5rem, 5vw, 3rem);
+}
+
+// Without an aside the article fills the row. A wide report scrolls inside it rather than growing it.
+.site-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.site-article {
+  flex: 1 1 32rem;
+  min-width: 0;
+}
+
+.site-aside {
+  flex: 0 1 18rem;
+  min-width: 0;
+  font-size: 0.9375rem;
+}
+
+.site-intro {
+  max-width: 46rem;
+  margin-bottom: 2rem;
+  font-size: 1.1875rem;
+  color: var(--site-muted);
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+.site-footer {
+  padding-block: 1.5rem;
+  background: var(--site-surface-alt);
+  border-top: 1px solid var(--site-border);
+  font-size: 0.875rem;
+  color: var(--site-muted);
+}
+
+.site-footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 2rem;
+
+  a {
+    color: inherit;
+  }
+}
+
+.site-footer__name {
+  font-weight: 600;
+  color: var(--site-ink);
+}
+
+@media print {
+  .site-header,
+  .site-section-nav,
+  .site-breadcrumb,
+  .site-footer {
+    display: none;
+  }
+
+  .site-hero,
+  .site-page-head {
+    padding: 0;
+    background: none;
+    border: 0;
+    color: inherit;
+  }
+
+  .site-main {
+    padding: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}

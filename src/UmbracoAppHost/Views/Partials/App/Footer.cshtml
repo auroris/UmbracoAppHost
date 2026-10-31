@@ -1,0 +1,12 @@
+@inherits UmbracoViewPage
+@{
+    var application = Model.SiteRoot(NavigationQueryService, PublishedStatusFilteringService);
+    await Visitor.ResolveAsync();
+}
+<footer class="app-footer">
+    <span>@application.NavigationTitle()</span>
+    @if (Visitor.IsSignedIn)
+    {
+        <span class="app-footer-user">Signed in as @Visitor.Name</span>
+    }
+</footer>

@@ -1,0 +1,71 @@
+@using AppBlocks.Documents.PaperReports
+@using System.Globalization
+@model PaperReportModel
+@{
+    Layout = null;
+    var french = Model.Culture.TwoLetterISOLanguageName == "fr";
+    string Word(string english, string francais) => french ? francais : english;
+    object? Raw(IReadOnlyDictionary<string, object?> row, string column) => row.TryGetValue(column, out var value) ? value : null;
+    string Value(IReadOnlyDictionary<string, object?> row, string column) => Convert.ToString(Raw(row, column), Model.Culture) ?? "";
+    // Providers return their own types: SQL Server, PostgreSQL and Oracle a DateTime and a decimal, SQLite often
+    // text, which is stored invariantly. Each is formatted in the report's culture.
+    decimal? Number(object? value) => value switch {
+        string text => decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed) ? parsed : null,
+        IConvertible number when number.GetTypeCode() is >= TypeCode.SByte and <= TypeCode.Decimal => Convert.ToDecimal(number, CultureInfo.InvariantCulture),
+        _ => null,
+    };
+    string Date(object? value) => value switch {
+        DateTime date => date.ToString("d", Model.Culture),
+        DateTimeOffset moment => moment.ToString("d", Model.Culture),
+        DateOnly day => day.ToString("d", Model.Culture),
+        string text when DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed) => parsed.ToString("d", Model.Culture),
+        _ => Convert.ToString(value, Model.Culture) ?? "",
+    };
+    string Amount(object? value) => Number(value) is { } amount ? amount.ToString("C2", Model.Culture) : Convert.ToString(value, Model.Culture) ?? "";
+    // The query has no ORDER BY, so the template orders the rows.
+    var rows = Model.Rows.OrderBy(row => Number(Raw(row, "ORDER_ID")) ?? decimal.MaxValue).ThenBy(row => Value(row, "ORDER_ID"), StringComparer.Ordinal).ToList();
+}
+<!doctype html>
+<html lang="@Model.Culture.Name">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@Word("Orders", "Commandes")</title>
+</head>
+<body class="paper-report">
+    <header>
+        <p class="paper-kicker">@Word("Sample application", "Application d'exemple")</p>
+        <h1>@Word("Orders", "Commandes")</h1>
+        <p>@Word("Prepared for", "Préparé pour") @Model.Person.Name · @Model.GeneratedAt.ToString("f", Model.Culture)</p>
+    </header>
+    <table>
+        <caption>@Word("Order details", "Détails des commandes")</caption>
+        <thead><tr>
+            <th scope="col">@Word("Order", "Commande")</th>
+            <th scope="col">@Word("Customer", "Client")</th>
+            <th scope="col">@Word("Region", "Région")</th>
+            <th scope="col">@Word("Status", "État")</th>
+            <th scope="col">@Word("Date", "Date")</th>
+            <th scope="col" class="number">@Word("Amount", "Montant")</th>
+        </tr></thead>
+        <tbody>
+        @foreach (var row in rows)
+        {
+            <tr>
+                <td>@Value(row, "ORDER_ID")</td>
+                <td>@Value(row, "CUSTOMER")</td>
+                <td>@Value(row, "REGION")</td>
+                <td>@Value(row, "STATUS")</td>
+                <td>@Date(Raw(row, "ORDER_DATE"))</td>
+                <td class="number">@Amount(Raw(row, "AMOUNT"))</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    @if (Model.Rows.Count == 0)
+    {
+        <p>@Word("No orders match these parameters.", "Aucune commande ne correspond à ces paramètres.")</p>
+    }
+    <footer>@Model.Rows.Count @Word("order(s)", "commande(s)")</footer>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/jsconfig.json",
+  "compilerOptions": {
+    "target": "ES2017",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2017", "DOM", "DOM.Iterable"],
+
+    // Plain JavaScript authored with JSDoc types -- there is no .ts here, but
+    // `npm run check` still type-checks the JSDoc and editors get full
+    // intellisense from it.
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    // Never type-check the vendor JavaScript in node_modules. These are untyped
+    // jQuery plugins; checking them produces hundreds of meaningless errors.
+    "maxNodeModuleJsDepth": 0,
+
+    "strict": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  },
+  // Only first-party browser source. The Node tooling scripts would
+  // need @types/node to check cleanly; they are excluded rather than dragging that
+  // dependency in.
+  "include": ["src/**/*.js", "src/**/*.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}

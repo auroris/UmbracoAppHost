@@ -1,0 +1,32 @@
+@inherits UmbracoViewPage
+@{
+    var application = Model.SiteRoot(NavigationQueryService, PublishedStatusFilteringService);
+    var pathBase = Context.Request.PathBase.Value ?? "";
+    await Visitor.ResolveAsync();
+}
+<header class="app-header">
+    <button type="button" class="app-nav-toggle" aria-controls="app-nav" aria-expanded="true" aria-label="Menu" title="Menu"><span></span></button>
+    <a class="app-brand" href="@application.Url()">@application.NavigationTitle()</a>
+    <div class="app-user">
+        @if (Visitor.IsSignedIn)
+        {
+            <details class="app-account">
+                <summary class="app-account-toggle" aria-label="Account: @Visitor.Name">
+                    <span class="app-user-name">@Visitor.Name</span>
+                </summary>
+                <div class="app-account-menu">
+                    <p class="app-account-kind">@(Visitor.IsMember ? "Member account" : "Backoffice Administrator")</p>
+                    @if (Visitor.IsBackOfficeUser)
+                    {
+                        <a href="@(pathBase)/umbraco">Backoffice</a>
+                    }
+                    <form method="post" action="@(pathBase)/application/account/logout" class="app-inline-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="returnUrl" value="@(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString)" />
+                        <button type="submit" class="app-link-button">Sign out</button>
+                    </form>
+                </div>
+            </details>
+        }
+    </div>
+</header>

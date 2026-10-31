@@ -1,0 +1,14 @@
+﻿@inherits UmbracoViewPage
+@inject UmbracoAppHost.Themes.SiteThemeCatalog Themes
+@{
+    PageAssets.RegisterPage(Model, NavigationQueryService, PublishedStatusFilteringService, Context);
+    await Visitor.ResolveAsync();
+    Layout = (await Themes.ResolveForAsync(Model, NavigationQueryService, PublishedStatusFilteringService, TemplateService)).LayoutFor(Visitor.IsSignedIn);
+    var pathBase = Context.Request.PathBase;
+    var pageQuery = Uri.EscapeDataString(Context.Request.QueryString.Value ?? "");
+}
+@if (Visitor.IsSignedIn)
+{
+    <interactive-report report="@Model.Value("reportName")" api-base="@(pathBase)/api/reports?appPageQuery=@pageQuery" download-base="@(pathBase)/api/download?appPageQuery=@pageQuery"></interactive-report>
+    <script type="module" src="@(pathBase)/api/reports/ui/ir.js" nonce="@AppBlocks.Blocks.AppPageAssets.Nonce(Context)"></script>
+}

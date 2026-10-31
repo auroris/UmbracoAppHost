@@ -1,0 +1,28 @@
+@model IEnumerable<UmbracoAppHost.Website.SiteMenuEntry>
+@*
+    One level of the site menu, recursing into children. The entries come from SiteMenu, which replaced the
+    visitor's tokens and dropped what has nothing to show this visitor. Razor encodes every label and omits an
+    attribute whose value is null. An item with children has a button beside it that opens them by keyboard and
+    touch, named after the item. A sign-out entry is a form, because signing out is a POST.
+*@
+@foreach (var item in Model)
+{
+    var isExternal = Uri.TryCreate(item.Url, UriKind.Absolute, out var destination)
+        && !string.Equals(destination.Host, Context.Request.Host.Host, StringComparison.OrdinalIgnoreCase);
+    var hasChildren = item.Children.Count > 0;
+    <li class="@(hasChildren ? "has-submenu" : null)">
+        @if (item.SignsOut)
+        {
+            <form method="post" action="@item.Url">@Html.AntiForgeryToken()<input type="hidden" name="returnUrl" value="@(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString)" /><button type="submit" class="site-menu__action">@item.Label</button></form>
+        }
+        else
+        {
+            <a href="@item.Url" target="@item.Target" rel="@(item.Url is not null && (isExternal || item.Target == "_blank") ? "noopener" : null)">@item.Label</a>
+        }
+        @if (hasChildren)
+        {
+            <button type="button" class="site-submenu-toggle" aria-expanded="false"><span class="visually-hidden">@item.Label</span></button>
+            <ul><partial name="Website/MenuItems" model="item.Children" /></ul>
+        }
+    </li>
+}

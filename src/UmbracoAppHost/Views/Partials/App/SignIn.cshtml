@@ -1,0 +1,72 @@
+@inherits UmbracoViewPage
+@using Umbraco.Cms.Web.Common.Models
+@using Umbraco.Cms.Web.Website.Controllers
+@{
+    await Visitor.ResolveAsync();
+    Context.Response.Headers.CacheControl = "no-cache, no-store";
+    var pathBase = Context.Request.PathBase.Value ?? "";
+    var originalUrl = ViewContext.RouteData.Values.TryGetValue("returnUrl", out var routedReturnUrl)
+        ? routedReturnUrl?.ToString() : Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString;
+    var returnUrl = SsoLoginUrls.CleanReturnUrl(Context, originalUrl);
+    var formUrl = SsoLoginUrls.LocalMemberUrl(Context, returnUrl);
+    var providerErrors = ViewData.GetExternalSignInProviderErrors()?.Errors?.ToArray() ?? [];
+    var requiresTwoFactor = ViewData.TryGetTwoFactorProviderNames(out var twoFactorProviders);
+    if (Visitor.ShouldStartMemberSignIn(!ViewData.ModelState.IsValid || providerErrors.Length > 0, requiresTwoFactor))
+    {
+        Context.Response.Redirect(SsoLoginUrls.SurfaceAction(Url, nameof(MemberLoginController.Login), "MemberLogin", new { provider = Visitor.AutomaticProvider!.MemberScheme, returnUrl }));
+        return;
+    }
+    var loginModel = new LoginModel();
+}
+@if (Visitor.Denied is not null)
+{
+    <p class="app-denied" role="alert">Sign-in was refused: @Visitor.Denied</p>
+}
+@foreach (var error in providerErrors)
+{
+    <p class="app-denied" role="alert">@error</p>
+}
+@if (requiresTwoFactor)
+{
+    foreach (var provider in twoFactorProviders!)
+    {
+        using (Html.BeginUmbracoForm<UmbTwoFactorLoginController>("Verify2FACode", new { returnUrl }, new { @class = "app-login-form", action = formUrl }))
+        {
+            @Html.ValidationSummary(false, "", new { @class = "app-login-errors", role = "alert" })
+            <input type="hidden" name="provider" value="@provider" />
+            <label>Security code for @provider
+                <input name="code" autocomplete="one-time-code" required />
+            </label>
+            <button type="submit" class="app-button">Verify</button>
+        }
+    }
+}
+else
+{
+    using (Html.BeginUmbracoForm<UmbLoginController>("HandleLogin", new { RedirectUrl = returnUrl }, new { @class = "app-login-form", action = formUrl }))
+    {
+        @Html.ValidationSummary(false, "", new { @class = "app-login-errors", role = "alert" })
+        <label asp-for="@loginModel.Username">Username</label>
+        <input asp-for="@loginModel.Username" autocomplete="username" required />
+        <label asp-for="@loginModel.Password">Password</label>
+        <input asp-for="@loginModel.Password" autocomplete="current-password" required />
+        <button type="submit" class="app-button">Sign in</button>
+    }
+    foreach (var provider in Visitor.Providers)
+    {
+        using (Html.BeginUmbracoForm<MemberLoginController>(nameof(MemberLoginController.Retry), new { returnUrl }, new { action = formUrl }))
+        {
+            <input type="hidden" name="provider" value="@provider.MemberScheme">
+            <input type="hidden" name="returnUrl" value="@returnUrl">
+            <button type="submit" class="app-button">Sign in with @provider.DisplayName</button>
+        }
+    }
+    if (Visitor.Providers.Count > 0)
+    {
+        <p><a href="@SsoLoginUrls.LocalMemberUrl(Context, returnUrl)">Use username and password</a></p>
+    }
+}
+@if (ViewData["MemberAccessOnly"] is not true)
+{
+    <p class="app-signin-note">Members of the backoffice Administrators group can also use the <a href="@(pathBase)/umbraco">backoffice sign-in</a> to access this application.</p>
+}

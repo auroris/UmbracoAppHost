@@ -1,0 +1,60 @@
+{
+  "$schema": "../../umbraco-package-schema.json",
+  "name": "Directory Accounts",
+  "alias": "DirectoryAccounts",
+  "version": "1.0.0",
+  "extensions": [
+    {
+      "type": "collectionAction",
+      "kind": "button",
+      "alias": "DirectoryAccounts.CollectionAction.User",
+      "name": "Add user from directory",
+      "api": "/App_Plugins/DirectoryAccounts/add-from-directory-action.js",
+      "weight": 50,
+      "meta": {
+        "label": "Add from directory",
+        "additionalOptions": true,
+        "accountKind": "user"
+      },
+      "conditions": [
+        {
+          "alias": "Umb.Condition.CollectionAlias",
+          "match": "Umb.Collection.User"
+        },
+        {
+          "alias": "Umb.Condition.InModal",
+          "match": false
+        }
+      ]
+    },
+    {
+      "type": "collectionAction",
+      "kind": "button",
+      "alias": "DirectoryAccounts.CollectionAction.Member",
+      "name": "Add member from directory",
+      "api": "/App_Plugins/DirectoryAccounts/add-from-directory-action.js",
+      "weight": 50,
+      "meta": {
+        "label": "Add from directory",
+        "additionalOptions": true,
+        "accountKind": "member"
+      },
+      "conditions": [
+        {
+          "alias": "Umb.Condition.CollectionAlias",
+          "match": "Umb.Collection.Member"
+        },
+        {
+          "alias": "Umb.Condition.InModal",
+          "match": false
+        }
+      ]
+    },
+    {
+      "type": "modal",
+      "alias": "DirectoryAccounts.Modal.AddFromDirectory",
+      "name": "Add from directory dialog",
+      "element": "/App_Plugins/DirectoryAccounts/add-from-directory-modal.js"
+    }
+  ]
+}

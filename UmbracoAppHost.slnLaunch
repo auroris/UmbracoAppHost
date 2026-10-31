@@ -1,0 +1,11 @@
+[
+  {
+    "Name": "Website",
+    "Projects": [
+      {
+        "Path": "src\\UmbracoAppHost.Web\\UmbracoAppHost.Web.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

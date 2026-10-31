@@ -1,0 +1,15 @@
+# Build output. The UmbracoAppHost library builds and packages these assets.
+dist/
+
+# Captured template fixtures. Regenerate with `npm run capture` against a running
+# Umbraco site -- they are artifacts of whatever content that site holds, so they
+# do not belong in the repo.
+demo/templates/
+
+# Dev pages compiled from src/templates by `npm run templates`. Generated output;
+# the master copies are the .template.html files.
+demo/pages/
+
+node_modules/
+*.tsbuildinfo
+npm-debug.log*

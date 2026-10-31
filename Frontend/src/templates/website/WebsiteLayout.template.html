@@ -1,0 +1,94 @@
+{{! ---------------------------------------------------------------------------
+    WebsiteLayout -- the website theme's page.
+
+    MASTER COPY. Compiles to src/UmbracoAppHost/Views/WebsiteLayout.cshtml via
+    `npm run templates:emit`, and to demo/pages/website/WebsiteLayout.html for local dev.
+    Do not edit the generated .cshtml.
+
+    The C# below stays a verbatim Razor block: it does redirect handling and cache-header
+    negotiation, and shared registration of ancestor-authored CSS and JS.
+--------------------------------------------------------------------------- }}
+{{# razor }}@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage
+@using AppBlocks.Publishing
+@{
+    Layout = null;
+
+    // A page with a redirect link shows nothing of its own.
+    if (SiteContent.Text(Model, "link") is { } redirect)
+    {
+        Context.Response.Redirect(redirect);
+        IgnoreBody();
+        return;
+    }
+
+    PageAssets.RegisterPage(Model, NavigationQueryService, PublishedStatusFilteringService, Context);
+
+    // The latest update of the page and everything that registered its own date. A client that already
+    // holds that version gets a 304 without the body being rendered.
+    var pageUpdateDate = Context.GetPageUpdateDate(Model.UpdateDate);
+    if (Context.ApplyCacheHeaders(pageUpdateDate))
+    {
+        IgnoreBody();
+        return;
+    }
+
+    var site = Model.SiteRoot(NavigationQueryService, PublishedStatusFilteringService);
+}
+{{# endrazor }}
+<!doctype html>
+<html dir="ltr" lang="{{ razor 'Model.GetCultureFromDomains()' }}">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#252f7c" />
+    <meta name="dcterms.creator" content="{{ razor 'Model.WriterName()' }}" />
+    <meta name="dcterms.modified" content="{{ razor 'pageUpdateDate.ToString("s")' }}" />
+    <title>{{ razor 'Model.PageTitle()' }}</title>
+    {{ styles }}
+{{! Headers that a view component registered in Context.Items. }}
+{{# razor }}
+    @if (Context.Items["PageHeaders"] is IEnumerable<string> pageHeaders)
+    {
+        foreach (var header in pageHeaders)
+        {
+            @Html.Raw(header)
+        }
+    }
+    else if (Context.Items["PageHeaders"] is string pageHeader)
+    {
+        @Html.Raw(pageHeader)
+    }
+{{# endrazor }}</head>
+<body class="site">
+    <a class="site-skip" href="#content">{{ dict "skiptocontent" default="Skip to main content" }}</a>
+    <header class="site-header" id="site-header">
+        <div class="site-container site-header__inner">
+            {{ partial "Website/Brand" }}
+            <button type="button" class="site-nav-toggle" aria-expanded="false" aria-controls="site-nav">
+                <span class="site-nav-toggle__bars" aria-hidden="true"></span>
+                <span>{{ dict "nav-menu" default="Menu" }}</span>
+            </button>
+            <nav class="site-nav" id="site-nav" aria-label="{{ dict "nav-site" default="Site navigation" }}">
+                {{ partial "Website/Menu" }}
+            </nav>
+        </div>
+    </header>
+    {{ partial "Website/PageHead" }}
+    <main id="content" class="site-main" tabindex="-1">
+        <div class="site-container site-content">
+            <article class="site-article">
+                {{ body }}
+            </article>
+            {{ partial "Website/Aside" }}
+        </div>
+    </main>
+    <footer class="site-footer">
+        <div class="site-container site-footer__inner">
+            <span class="site-footer__name">{{ razor 'site.NavigationTitle()' }}</span>
+            <span>{{ dict "datemodified" }}: {{ razor 'pageUpdateDate.ToString("yyyy-MM-dd")' }}</span>
+            <a href="{{ razor 'Context.Request.PathBase' }}/umbraco/">{{ dict "editthispage" }}</a>
+        </div>
+    </footer>
+    {{ scripts }}
+</body>
+</html>

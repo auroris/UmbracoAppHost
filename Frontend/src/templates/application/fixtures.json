@@ -1,0 +1,29 @@
+{
+  "origin": "https://localhost:44392",
+  "layouts": {
+    "AppHome": "AppMaster",
+    "AppPage": "AppMaster"
+  },
+  "values": {
+    "content": "<p>This application was created from the UmbracoAppHost application starter. Rename it, replace this introduction, and add pages and reports beneath it.</p>"
+  },
+  "dictionary": {
+    "app-skip": "Skip to content",
+    "app-signin-prompt": "Sign in to use this application."
+  },
+  "razor": {
+    "Model.GetCultureFromDomains()": "en",
+    "Model.PageTitle()": "Orders",
+    "application.NavigationTitle()": "Sample Application",
+    "pathBase": ""
+  },
+  "partials": {
+    "App/Header": "<header class=\"app-header\"><button type=\"button\" class=\"app-nav-toggle\" aria-controls=\"app-nav\" aria-expanded=\"true\" aria-label=\"Menu\"><span></span></button><a class=\"app-brand\" href=\"#\">Sample Application</a><div class=\"app-user\"><details class=\"app-account\"><summary class=\"app-account-toggle\" aria-label=\"Account: Jane Doe\"><span class=\"app-user-name\">Jane Doe</span></summary><div class=\"app-account-menu\"><p class=\"app-account-kind\">Member account</p><form class=\"app-inline-form\"><button type=\"button\" class=\"app-link-button\">Sign out</button></form></div></details></div></header>",
+    "App/Navigation": "<nav class=\"app-nav\" id=\"app-nav\" aria-label=\"Application menu\"><ul class=\"app-nav-list\"><li class=\"app-nav-item\"><a href=\"#\">Home</a></li><li class=\"app-nav-item is-open\"><a href=\"#\">About</a><ul class=\"app-nav-list\"><li class=\"app-nav-item\"><a href=\"#\">Contacts</a></li></ul></li><li class=\"app-nav-item is-current\"><a href=\"#\" aria-current=\"page\">Orders</a></li></ul></nav>",
+    "App/Breadcrumb": "<nav class=\"app-breadcrumb\" aria-label=\"Breadcrumb\"><ol><li><a href=\"#\">Sample Application</a></li><li aria-current=\"page\">Orders</li></ol></nav>",
+    "App/Cards": "<ul class=\"app-cards\"><li class=\"app-card\"><a href=\"#\"><span class=\"app-card-kind\">Page</span><span class=\"app-card-title\">About</span></a></li><li class=\"app-card\"><a href=\"#\"><span class=\"app-card-kind\">Report</span><span class=\"app-card-title\">Orders</span></a></li></ul>",
+    "App/SignIn": "<form class=\"app-login-form\"><label for=\"username\">Username</label><input id=\"username\" autocomplete=\"username\" required><label for=\"password\">Password</label><input id=\"password\" type=\"password\" autocomplete=\"current-password\" required><button type=\"button\" class=\"app-button\">Sign in</button></form><p class=\"app-signin-note\">Members of the backoffice Administrators group can also use the <a href=\"#\">backoffice sign-in</a> to access this application.</p>",
+    "App/Footer": "<footer class=\"app-footer\"><span>Sample Application</span><span class=\"app-footer-user\">Signed in as Jane Doe</span></footer>"
+  },
+  "body": "<div class=\"app-content\"><p>A page of the application.</p></div>"
+}

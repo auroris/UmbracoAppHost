@@ -1,0 +1,136 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>UmbracoAppHost</RootNamespace>
+    <RazorCompileOnBuild>false</RazorCompileOnBuild>
+    <RazorCompileOnPublish>false</RazorCompileOnPublish>
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+    <!-- Let MSBuild check browser sources and dependencies outside the VS solution. -->
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+    <AppBlocksRoot Condition="'$(AppBlocksRoot)' == ''">$(MSBuildThisFileDirectory)..\..\..\AppBlocks</AppBlocksRoot>
+    <IdentityServerRoot Condition="'$(IdentityServerRoot)' == ''">$(MSBuildThisFileDirectory)..\..\..\IdentityServer</IdentityServerRoot>
+    <!-- App_Plugins and the login images must sit at the site root, not under /_content/UmbracoAppHost/. -->
+    <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
+    <Description>A shared base for Umbraco sites: single sign-on and account policy, application blocks and Interactive Reports, website and application themes, virtual-path hosting, and the workarounds for upstream Umbraco gaps.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The implicit usings of the Web SDK, which this code was written against. -->
+    <Using Include="Microsoft.AspNetCore.Builder" />
+    <Using Include="Microsoft.AspNetCore.Hosting" />
+    <Using Include="Microsoft.AspNetCore.Http" />
+    <Using Include="Microsoft.AspNetCore.Routing" />
+    <Using Include="Microsoft.Extensions.Configuration" />
+    <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <Using Include="Microsoft.Extensions.Hosting" />
+    <Using Include="Microsoft.Extensions.Logging" />
+    <!-- The two usings Umbraco.Cms.Targets adds to a web project. -->
+    <Using Include="Umbraco.Cms.Core.DependencyInjection" />
+    <Using Include="Umbraco.Extensions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <InternalsVisibleTo Include="UmbracoAppHost.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Common to every site built on the base; a site gets these transitively. -->
+    <PackageReference Include="Umbraco.Cms" />
+    <PackageReference Include="Umbraco.Cms.DevelopmentMode.Backoffice" />
+    <PackageReference Include="Umbraco.Community.UmbNav" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
+    <PackageReference Include="uSync" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- AppBlocks owns forms/data sources; its optional companion supplies interactive reports. -->
+    <ProjectReference Include="$(AppBlocksRoot)\src\AppBlocks\AppBlocks.csproj" />
+    <ProjectReference Include="$(AppBlocksRoot)\src\AppBlocks.InteractiveReports\AppBlocks.InteractiveReports.csproj" />
+    <!-- The built-in server and Negotiate package come from the sibling core library; picker lookup code is local. -->
+    <ProjectReference Include="$(IdentityServerRoot)\IdentityServer.Core\IdentityServer.Core.csproj" />
+    <ProjectReference Include="$(AppBlocksRoot)\src\AppBlocks.Documents\AppBlocks.Documents.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="uSync\**\*.config" />
+    <None Remove="uSync\**\*.config" />
+    <Content Remove="uSync\**\*.config" />
+    <!-- The saved uSync export ships with every build so sites can be created and updated from it. -->
+    <Content Include="uSync\**\*.config" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <EmbeddedResource Include="Hosting\defaults.json" LogicalName="UmbracoAppHost.Hosting.defaults.json" />
+    <!-- The sample database's schema scripts, read through the embedded files manifest; see Sample/SampleData.cs. -->
+    <EmbeddedResource Include="Sample\Schema\**\*.sql" />
+    <None Remove="Sample\Schema\**\*.sql" />
+    <EmbeddedResource Include="Views\**\*.cshtml" />
+    <Content Remove="wwwroot/dist/**/*" />
+    <!-- A published site carries only its own Views folder and editor schema files; the library's
+         views are embedded, and every project directory receives its own generated schema copies. -->
+    <Content Update="**\*.cshtml" CopyToPublishDirectory="Never" />
+    <Content Update="appsettings-schema*.json;umbraco-package-schema.json" CopyToPublishDirectory="Never" CopyToOutputDirectory="Never" />
+    <Content Update="Hosting\defaults.json" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <!-- Visual Studio only schedules projects listed in its solution. The source dependencies
+       stay outside the solution, so build them here using normal project traversal. -->
+  <Target Name="BuildSourceDependenciesInVisualStudio" BeforeTargets="ResolveProjectReferences"
+          Condition="'$(BuildingInsideVisualStudio)' == 'true' and '$(DesignTimeBuild)' != 'true'">
+    <MSBuild Projects="@(ProjectReference)" Targets="Build" BuildInParallel="false"
+             Properties="Configuration=$(Configuration);BuildingInsideVisualStudio=false;BuildProjectReferences=true"
+             RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained" />
+  </Target>
+
+  <!-- AppBlocks pins the packages it shares with this library itself so that it builds alone; Directory.Packages.props
+       pins them here. A difference would quietly compile AppBlocks against one version and run it on another, so it
+       stops the build. The check lives only here, because AppBlocks must not need this repository. -->
+  <Target Name="CheckAppBlocksPackageVersions" BeforeTargets="CollectPackageReferences;ResolveProjectReferences"
+          Condition="Exists('$(AppBlocksRoot)\Directory.Build.props') and '$(DesignTimeBuild)' != 'true'">
+    <XmlPeek XmlInputPath="$(AppBlocksRoot)\Directory.Build.props" Query="/Project/PropertyGroup/AppBlocksUmbracoVersion/text()">
+      <Output TaskParameter="Result" PropertyName="_AppBlocksUmbracoVersion" />
+    </XmlPeek>
+    <ItemGroup>
+      <_AppBlocksProject Include="$(AppBlocksRoot)\src\AppBlocks\AppBlocks.csproj;$(AppBlocksRoot)\src\AppBlocks.Documents\AppBlocks.Documents.csproj;$(AppBlocksRoot)\src\AppBlocks.InteractiveReports\AppBlocks.InteractiveReports.csproj" />
+    </ItemGroup>
+    <XmlPeek XmlInputPath="%(_AppBlocksProject.Identity)" Query="/Project/ItemGroup/PackageReference[@Include='Microsoft.Data.Sqlite']/@Version">
+      <Output TaskParameter="Result" ItemName="_AppBlocksSqliteVersion" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="%(_AppBlocksProject.Identity)" Query="/Project/ItemGroup/PackageReference[@Include='Microsoft.Extensions.FileProviders.Embedded']/@Version">
+      <Output TaskParameter="Result" ItemName="_AppBlocksEmbeddedVersion" />
+    </XmlPeek>
+    <PropertyGroup>
+      <_AppHostUmbracoVersion>@(PackageVersion->WithMetadataValue('Identity', 'Umbraco.Cms')->Metadata('Version'))</_AppHostUmbracoVersion>
+      <_AppHostDevelopmentModeVersion>@(PackageVersion->WithMetadataValue('Identity', 'Umbraco.Cms.DevelopmentMode.Backoffice')->Metadata('Version'))</_AppHostDevelopmentModeVersion>
+      <_AppHostSqliteVersion>@(PackageVersion->WithMetadataValue('Identity', 'Microsoft.Data.Sqlite')->Metadata('Version'))</_AppHostSqliteVersion>
+      <_AppHostEmbeddedVersion>@(PackageVersion->WithMetadataValue('Identity', 'Microsoft.Extensions.FileProviders.Embedded')->Metadata('Version'))</_AppHostEmbeddedVersion>
+      <_AppBlocksSqliteVersions>@(_AppBlocksSqliteVersion->Distinct())</_AppBlocksSqliteVersions>
+      <_AppBlocksEmbeddedVersions>@(_AppBlocksEmbeddedVersion->Distinct())</_AppBlocksEmbeddedVersions>
+    </PropertyGroup>
+    <Error Condition="'$(_AppBlocksUmbracoVersion)' != '$(_AppHostUmbracoVersion)'"
+           Text="Umbraco.Cms is $(_AppHostUmbracoVersion) in UmbracoAppHost's Directory.Packages.props but '$(_AppBlocksUmbracoVersion)' as AppBlocksUmbracoVersion in $(AppBlocksRoot)\Directory.Build.props. Change both together." />
+    <Error Condition="'$(_AppHostDevelopmentModeVersion)' != '$(_AppHostUmbracoVersion)'"
+           Text="Umbraco.Cms.DevelopmentMode.Backoffice is $(_AppHostDevelopmentModeVersion) but Umbraco.Cms is $(_AppHostUmbracoVersion) in UmbracoAppHost's Directory.Packages.props. Change both together." />
+    <Error Condition="'$(_AppBlocksSqliteVersions)' != '$(_AppHostSqliteVersion)'"
+           Text="Microsoft.Data.Sqlite is $(_AppHostSqliteVersion) in UmbracoAppHost's Directory.Packages.props but '$(_AppBlocksSqliteVersions)' in the AppBlocks projects under $(AppBlocksRoot)\src. Change both together." />
+    <Error Condition="'$(_AppBlocksEmbeddedVersions)' != '$(_AppHostEmbeddedVersion)'"
+           Text="Microsoft.Extensions.FileProviders.Embedded is $(_AppHostEmbeddedVersion) in UmbracoAppHost's Directory.Packages.props but '$(_AppBlocksEmbeddedVersions)' in the AppBlocks projects under $(AppBlocksRoot)\src. Change both together." />
+  </Target>
+
+  <Import Project="Frontend.targets" />
+
+  <!-- uSync's package targets disable output copying for this folder. The shared library
+       also supplies the export to referencing hosts and the site-management scripts. -->
+  <Target Name="IncludeUSyncExport" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <Content Condition="$([System.String]::Copy('%(Content.Identity)').Replace('\', '/').StartsWith('uSync/'))">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </Content>
+    </ItemGroup>
+  </Target>
+</Project>

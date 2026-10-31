@@ -1,0 +1,11 @@
+@inherits UmbracoViewPage
+@if (Model.Value<BlockGridModel>("applicationBlocks")?.Any() == true)
+{
+    @await Component.InvokeAsync("WebsiteBlocks", new { page = Model })
+}
+else if (SiteContent.IsSite(Model))
+{
+    <div class="site-intro">@Model.Value("introduction")</div>
+    <p><a class="btn btn-primary" href="@(Context.Request.PathBase)/umbraco/">@Umbraco.GetDictionaryValue("open-backoffice")</a></p>
+    @await Html.PartialAsync("App/Cards", Model)
+}

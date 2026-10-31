@@ -1,0 +1,25 @@
+@inherits UmbracoViewPage
+@{
+    var site = Model.SiteRoot(NavigationQueryService, PublishedStatusFilteringService);
+    var trail = Model.AncestorsOrSelf(NavigationQueryService, PublishedStatusFilteringService)
+        .Where(item => item.Level >= site.Level).OrderBy(item => item.Level)
+        .ToList();
+}
+@if (trail.Count > 1)
+{
+    <nav class="app-breadcrumb" aria-label="Breadcrumb">
+        <ol>
+            @foreach (var item in trail)
+            {
+                if (item.Id == Model.Id)
+                {
+                    <li aria-current="page">@item.NavigationTitle()</li>
+                }
+                else
+                {
+                    <li><a href="@item.NavigationUrl()">@item.NavigationTitle()</a></li>
+                }
+            }
+        </ol>
+    </nav>
+}

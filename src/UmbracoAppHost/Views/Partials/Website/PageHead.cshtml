@@ -1,0 +1,54 @@
+@inherits UmbracoViewPage
+@{
+    var site = Model.SiteRoot(NavigationQueryService, PublishedStatusFilteringService);
+    var trail = Model.AncestorsOrSelf(NavigationQueryService, PublishedStatusFilteringService)
+        .Where(node => node.Level >= site.Level).OrderBy(node => node.Level).ToArray();
+}
+@* The home page opens with a hero; any other page with its place in the site and its section. *@
+@if (site.Key == Model.Key)
+{
+    <section class="site-hero">
+        <div class="site-container">
+            @if (!string.Equals(site.NavigationTitle(), Model.PageTitle(), StringComparison.Ordinal))
+            {
+                <p class="site-hero__kicker">@site.NavigationTitle()</p>
+            }
+            <h1 class="site-hero__title">@Model.PageTitle()</h1>
+        </div>
+    </section>
+}
+else
+{
+    var section = Model.LocalNavigation(NavigationQueryService, PublishedStatusFilteringService);
+    <div class="site-page-head">
+        <div class="site-container">
+            <nav class="site-breadcrumb" aria-label="Breadcrumb">
+                <ol>
+                    @foreach (var entry in trail)
+                    {
+                        if (entry.Key == Model.Key)
+                        {
+                            <li aria-current="page">@entry.NavigationTitle()</li>
+                        }
+                        else
+                        {
+                            <li><a href="@entry.NavigationUrl()">@entry.NavigationTitle()</a></li>
+                        }
+                    }
+                </ol>
+            </nav>
+            <h1>@Model.PageTitle()</h1>
+            @if (section.Count > 1)
+            {
+                <nav class="site-section-nav" aria-label="@Umbraco.GetDictionaryValueOrDefault("nav-local", "Section navigation")">
+                    <ul>
+                        @foreach (var entry in section)
+                        {
+                            <li><a href="@entry.Page.NavigationUrl()" aria-current="@(entry.Page.Key == Model.Key ? "page" : null)">@entry.Page.NavigationTitle()</a></li>
+                        }
+                    </ul>
+                </nav>
+            }
+        </div>
+    </div>
+}

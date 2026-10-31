@@ -1,0 +1,39 @@
+{{! The application shell: header bar, side menu, breadcrumb, page title, and the page's regions.
+    Every application page uses it once the visitor has signed in; AppSignIn is the other layout. }}
+{{# razor }}
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage
+@{
+    Layout = null;
+    PageAssets.RegisterPage(Model, NavigationQueryService, PublishedStatusFilteringService, Context);
+    var application = Model.SiteRoot(NavigationQueryService, PublishedStatusFilteringService);
+    if (SiteContent.Text(Model, "link") is { } redirect)
+    {
+        Context.Response.Redirect(redirect);
+        IgnoreBody();
+        return;
+    }
+}
+{{# endrazor }}
+<!doctype html>
+<html lang="{{ razor 'Model.GetCultureFromDomains()' }}">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ razor 'Model.PageTitle()' }} - {{ razor 'application.NavigationTitle()' }}</title>
+    {{ styles "app" }}
+</head>
+<body class="app">
+    <a class="app-skip" href="#main">{{ dict "app-skip" default="Skip to content" }}</a>
+    {{ partial "App/Header" }}
+    <div class="app-frame">
+        {{ partial "App/Navigation" }}
+        <main class="app-main" id="main">
+            {{ partial "App/Breadcrumb" }}
+            <h1 class="app-page-title">{{ razor 'Model.PageTitle()' }}</h1>
+            {{ body }}
+        </main>
+    </div>
+    {{ partial "App/Footer" }}
+    {{ scripts "app" }}
+</body>
+</html>

@@ -1,0 +1,149 @@
+// Layout blocks in the application shell.
+//
+// The block partials emit one neutral markup for every theme: `ah-grid` and `ah-grid__item` for each
+// grid of blocks (the page, and every area), `ah-layout` and `ah-area` for the column layouts, and
+// `ah-region` for APEX's region. They carry the spans as Umbraco's own custom properties, and
+// Umbraco's grid stylesheet, imported below exactly as the website bundle carries it, does the column
+// arithmetic. This file is the application theme on top: gutters, region chrome in the manner of
+// the Universal Theme, and stacking below 48rem, the breakpoint where the side menu also becomes
+// an overlay, so the shell and its content change shape at the same width.
+
+@import "scss/site/blockgridlayout";
+
+:root {
+  --app-gutter: 1rem;
+}
+
+// Twelve tracks have eleven gaps whatever the blocks span, so a fixed gutter would overflow a narrow
+// grid, such as a fieldset in a four-column area. The column gap is therefore capped at 3% of the
+// grid's width; at the widths a page usually has, the cap is above the gutter and changes nothing.
+.ah-grid {
+  --umb-block-grid--column-gap: min(var(--app-gutter), 3%);
+  --umb-block-grid--row-gap: var(--app-gutter);
+}
+
+.ah-layout {
+  --umb-block-grid--areas-column-gap: min(var(--app-gutter), 3%);
+  --umb-block-grid--areas-row-gap: var(--app-gutter);
+}
+
+// The page's own grid keeps the spacing its forms and reports had before they sat on a grid.
+.application-blocks > .ah-grid {
+  --umb-block-grid--column-gap: min(1.5rem, 3%);
+  --umb-block-grid--row-gap: 1.5rem;
+}
+
+// A grid track never grows for its content, so a wide report scrolls inside its column instead of
+// pushing the next one off the page.
+.ah-grid__item,
+.ah-area {
+  min-width: 0;
+}
+
+// Spans apply at every width above the breakpoint. Umbraco's stylesheet only applies them from
+// 1024px and triples them below; that suits a page without a side menu, not this shell.
+.ah-grid > .ah-grid__item {
+  grid-column-end: span min(var(--umb-block-grid--item-column-span, 1), var(--umb-block-grid--grid-columns));
+}
+
+.ah-layout > .ah-area {
+  grid-column-end: span min(var(--umb-block-grid--area-column-span, 1), var(--umb-block-grid--area-grid-columns));
+}
+
+// Below the breakpoint every block and area takes the full width, so no column gap is needed.
+@media (max-width: 48rem) {
+  .ah-grid,
+  .application-blocks > .ah-grid {
+    --umb-block-grid--column-gap: 0px;
+  }
+
+  .ah-layout {
+    --umb-block-grid--areas-column-gap: 0px;
+  }
+
+  .ah-grid > .ah-grid__item {
+    grid-column-end: span var(--umb-block-grid--grid-columns, 12);
+  }
+
+  .ah-layout > .ah-area {
+    grid-column-end: span var(--umb-block-grid--area-grid-columns, 12);
+  }
+}
+
+// Region: a card with a title bar ------------------------------------------------------------
+
+.ah-region {
+  @extend %app-region;
+  margin: 0;
+  padding: 0;
+}
+
+// A form is a card already; a region inside it keeps its border but not a second shadow.
+.app-form .ah-region {
+  box-shadow: none;
+}
+
+.ah-region__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.ah-region__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ah-region__body {
+  padding: 1rem 1.25rem;
+}
+
+// Collapsible: a details element. Its own marker differs between browsers, so draw a chevron that
+// points right when closed and down when open.
+details.ah-region > summary {
+  cursor: pointer;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::before {
+    flex: none;
+    width: 0.45rem;
+    height: 0.45rem;
+    margin: 0 0.25rem 0 0.1rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+    content: "";
+  }
+
+  &:hover .ah-region__title {
+    color: var(--app-accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--app-accent);
+    outline-offset: -2px;
+  }
+}
+
+details.ah-region[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+details.ah-region:not([open]) > summary {
+  border-bottom: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  details.ah-region > summary::before {
+    transition: none;
+  }
+}

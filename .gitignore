@@ -1,0 +1,11 @@
+# Build output and local instance data. The common host has additional runtime ignores.
+.vs/
+.idea/
+.claude/worktrees/
+*.user
+[Bb]in/
+[Oo]bj/
+artifacts/
+reference/
+# Leftover generated assets from the retired frontend packaging project.
+/src/FourWing.Frontend/wwwroot/

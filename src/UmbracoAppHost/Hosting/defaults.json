@@ -1,0 +1,137 @@
+{
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Microsoft": "Warning",
+        "Microsoft.Hosting.Lifetime": "Information",
+        "System": "Warning"
+      }
+    },
+    "WriteTo": [
+      {
+        "Name": "Console"
+      }
+    ]
+  },
+  "Umbraco": {
+    "CMS": {
+      "TypeFinder": {
+        "AdditionalAssemblyExclusionEntries": ["xunit."]
+      },
+      "Global": {
+        "UseHttps": false
+      },
+      "Content": {
+        "AllowEditInvariantFromNonDefault": true,
+        "ContentVersionCleanupPolicy": {
+          "EnableCleanup": true
+        }
+      },
+      "Unattended": {
+        "UpgradeUnattended": true,
+        "InstallUnattended": true
+      },
+      "Security": {
+        "UsernameIsEmail": false,
+        "AllowConcurrentLogins": false
+      },
+      "Hosting": {
+        "Debug": false
+      }
+    }
+  },
+  "uSync": {
+    "Settings": {
+      "RootFolder": "uSync/v18/",
+      "ExportOnSave": "All",
+      "ImportOnFirstBoot": true,
+      "ImportAtStartup": "None",
+      "ExportAtStartup": "None"
+    }
+  },
+  "Accounts": {
+    "MemberTypeAlias": "Member",
+    "ReportAdministratorUserGroups": [
+      "admin",
+      "interactiveReportAdministrators"
+    ],
+    "EnsureMemberGroups": [
+      "Report Users",
+      "Users"
+    ],
+    "EnsureUserGroups": [],
+    "EnsureBackOfficeUsers": [],
+    "EnsureMembers": [],
+    "SeedCurrentWindowsUserAsAdministrator": false,
+    "RetireDeletedUsers": true,
+    "RetireDeletedMembers": true
+  },
+  "BackOfficeLogin": {
+    "DefaultFlow": "Auto",
+    "DebugFlow": "Debug"
+  },
+  "IdentityServer": {
+    "Enabled": true,
+    "Name": "Domain",
+    "Authority": "",
+    "ClientId": "umbraco-backoffice",
+    "ClientSecret": "",
+    "BackOfficeEnabled": true,
+    "MemberEnabled": true,
+    "DenyLocalLogin": false,
+    "BackOfficeAutoLink": {
+      "AutoLinkExternalAccount": true,
+      "AllowManualLinking": true,
+      "DefaultUserGroups": []
+    },
+    "MemberAutoLink": {
+      "AutoLinkExternalAccount": true,
+      "DefaultIsApproved": true,
+      "DefaultMemberTypeAlias": "Member",
+      "DefaultMemberGroups": [],
+      "ExternalOnly": false
+    },
+    "CallbackPath": "/signin-oidc",
+    "RequireHttpsMetadata": true,
+    "AcceptAnyServerCertificate": false,
+    "DirectoryApiKey": ""
+  },
+  "EmbeddedIdentityServer": {
+    "Enabled": true,
+    "Clients": [],
+    "Groups": [],
+    "PersistKeys": true,
+    "AccessTokenLifetime": "01:00:00",
+    "IdentityTokenLifetime": "01:00:00",
+    "AuthorizationCodeLifetime": "00:05:00"
+  },
+  "Directory": {
+    "UserRoot": "",
+    "UserRootGlobal": "",
+    "GlobalSearchMinLength": 2,
+    "GlobalSearchSizeLimitBuffer": 20,
+    "DefaultTake": 20,
+    "MaxTake": 50
+  },
+  "AppBlocks": {
+    "IncludeBackOfficeReports": true
+  },
+  "InteractiveReport": {
+    "WhoamiEnabled": true,
+    "Administrators": [],
+    "SavedReports": {
+      "connection": "ReportsDb"
+    }
+  },
+  "Attachments": {
+    "Connection": "AttachmentsDb",
+    "MaxFileSize": 26214400,
+    "AllowedExtensions": [],
+    "RetentionDays": 30
+  },
+  "UmbracoAppHost": {
+    "AdminUserName": "admin",
+    "AdminEmail": "admin@localhost.local"
+  }
+}

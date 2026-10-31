@@ -1,0 +1,18 @@
+{{! The application's root page: the introduction, then one card per page beneath the root. }}
+{{# razor }}
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage
+@inject UmbracoAppHost.Themes.SiteThemeCatalog Themes
+@{
+    PageAssets.RegisterPage(Model, NavigationQueryService, PublishedStatusFilteringService, Context);
+    await Visitor.ResolveAsync();
+    Layout = (await Themes.ResolveForAsync(Model, NavigationQueryService, PublishedStatusFilteringService, TemplateService)).LayoutFor(Visitor.IsSignedIn);
+    if (!Visitor.IsSignedIn)
+    {
+        return;
+    }
+}
+{{# endrazor }}
+<div class="app-intro">
+    {{ value "content" }}
+</div>
+{{ partial "App/Cards" }}

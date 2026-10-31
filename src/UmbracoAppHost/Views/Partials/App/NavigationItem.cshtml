@@ -1,0 +1,24 @@
+@inherits UmbracoViewPage
+@{
+    // One menu entry and, when the page has children, their entries beneath it. The branch that
+    // holds the page being viewed is open, and that page is marked as current.
+    var viewing = UmbracoContext.PublishedRequest?.PublishedContent;
+    var current = viewing is not null && viewing.Id == Model.Id;
+    var open = viewing is not null && Model.IsAncestorOrSelf(viewing);
+    var depth = Model.Level - (ViewData["AppNavigationRootLevel"] as int? ?? 1);
+    var children = depth < 4
+        ? Model.VisibleChildren(NavigationQueryService, PublishedStatusFilteringService).ToList()
+        : new List<IPublishedContent>();
+}
+<li class="app-nav-item@(current ? " is-current" : "")@(open ? " is-open" : "")">
+    <a href="@Model.NavigationUrl()" aria-current="@(current ? "page" : null)">@Model.NavigationTitle()</a>
+    @if (children.Count > 0)
+    {
+        <ul class="app-nav-list">
+            @foreach (var child in children)
+            {
+                @await Html.PartialAsync("App/NavigationItem", child)
+            }
+        </ul>
+    }
+</li>

@@ -1,0 +1,12 @@
+/bin/
+/obj/
+/umbraco/
+/App_Data/
+/appsettings-schema*.json
+/umbraco-package-schema.json
+/wwwroot/dist/
+/Views/WebsiteLayout.cshtml
+/Views/AppMaster.cshtml
+/Views/AppHome.cshtml
+/Views/AppPage.cshtml
+/Views/AppSignIn.cshtml

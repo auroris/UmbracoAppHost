@@ -1,0 +1,34 @@
+<Project>
+  <PropertyGroup>
+    <FrontendRoot>$(MSBuildThisFileDirectory)..\..\Frontend</FrontendRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrontendSource Include="$(FrontendRoot)\src\**\*;$(FrontendRoot)\build.mjs;$(FrontendRoot)\templates.mjs;$(FrontendRoot)\package.json;$(FrontendRoot)\package-lock.json" />
+  </ItemGroup>
+  <Target Name="RestoreFrontend" Condition="'$(DesignTimeBuild)' != 'true'"
+          Inputs="$(FrontendRoot)\package.json;$(FrontendRoot)\package-lock.json"
+          Outputs="$(FrontendRoot)\node_modules\.package-lock.json">
+    <Exec WorkingDirectory="$(FrontendRoot)" Command="npm ci --no-audit --no-fund" />
+  </Target>
+  <Target Name="BuildFrontend" BeforeTargets="PrepareForBuild" DependsOnTargets="RestoreFrontend"
+          Condition="'$(DesignTimeBuild)' != 'true'"
+          Inputs="@(FrontendSource)"
+          Outputs="$(FrontendRoot)\dist\.build-stamp;$(FrontendRoot)\dist\scripts\site.js;$(FrontendRoot)\dist\css\app.css;$(MSBuildProjectDirectory)\Views\WebsiteLayout.cshtml;$(MSBuildProjectDirectory)\Views\AppMaster.cshtml;$(MSBuildProjectDirectory)\Views\AppHome.cshtml;$(MSBuildProjectDirectory)\Views\AppPage.cshtml;$(MSBuildProjectDirectory)\Views\AppSignIn.cshtml">
+    <Exec WorkingDirectory="$(FrontendRoot)" Command="npm run build" />
+    <Exec WorkingDirectory="$(FrontendRoot)" Command="npm run templates:emit" />
+    <Touch Files="$(FrontendRoot)\dist\.build-stamp" AlwaysCreate="true" />
+  </Target>
+  <!-- Collect after generation as well, so a clean checkout builds on its first attempt. -->
+  <Target Name="IncludeFrontend" BeforeTargets="AssignTargetPaths" DependsOnTargets="BuildFrontend">
+    <ItemGroup>
+      <_FrontendAsset Include="$(FrontendRoot)\dist\**\*" Exclude="$(FrontendRoot)\dist\.build-stamp" />
+      <Content Include="@(_FrontendAsset)"
+               Link="wwwroot/dist/%(_FrontendAsset.RecursiveDir)%(_FrontendAsset.Filename)%(_FrontendAsset.Extension)" />
+      <EmbeddedResource Remove="Views\**\*.cshtml" />
+      <EmbeddedResource Include="Views\**\*.cshtml" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_FrontendAsset)"
+          DestinationFiles="@(_FrontendAsset->'$(MSBuildProjectDirectory)/wwwroot/dist/%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+</Project>

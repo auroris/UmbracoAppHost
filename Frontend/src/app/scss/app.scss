@@ -1,0 +1,529 @@
+// The application shell, in the spirit of APEX's Universal Theme: a header bar, a collapsible side
+// menu, a breadcrumb, the page title, and content regions as cards. Retheme an application by
+// overriding the custom properties on :root from its own stylesheet.
+
+:root {
+  --app-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --app-bg: #f4f5f7;
+  --app-surface: #ffffff;
+  --app-text: #1f2733;
+  --app-muted: #5f6b7a;
+  --app-border: #d9dee4;
+  --app-accent: #0572ce; // the Universal Theme blue
+  --app-accent-text: #ffffff;
+  --app-header-bg: #ffffff;
+  --app-header-text: #1f2733;
+  --app-header-height: 3rem;
+  --app-nav-bg: #ffffff;
+  --app-nav-width: 15rem;
+  --app-nav-text: #2b3440;
+  --app-nav-hover: #eef4fb;
+  --app-nav-current: #e4eefa;
+  --app-radius: 0.375rem;
+  --app-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font: 0.9375rem/1.5 var(--app-font);
+  color: var(--app-text);
+  background: var(--app-bg);
+}
+
+a {
+  color: var(--app-accent);
+}
+
+.app-skip {
+  position: absolute;
+  left: -100vw;
+  top: 0;
+  padding: 0.5rem 1rem;
+  background: var(--app-surface);
+  z-index: 20;
+
+  &:focus {
+    left: 0;
+  }
+}
+
+// Header bar --------------------------------------------------------------------------
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: var(--app-header-height);
+  padding: 0 1rem;
+  background: var(--app-header-bg);
+  color: var(--app-header-text);
+  border-bottom: 1px solid var(--app-border);
+  box-shadow: var(--app-shadow);
+}
+
+.app-brand {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+  font-size: 0.875rem;
+  color: var(--app-muted);
+}
+
+.app-inline-form {
+  display: inline;
+  margin: 0;
+}
+
+.app-account {
+  position: relative;
+}
+
+.app-account-toggle {
+  padding: 0.5rem;
+  border-radius: var(--app-radius);
+  color: var(--app-header-text);
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--app-nav-hover);
+  }
+
+  .app-user-name {
+    display: inline-block;
+    max-width: 35vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+  }
+}
+
+.app-account-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.25rem);
+  min-width: 14rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+
+  > a,
+  > form {
+    display: block;
+    margin-top: 0.5rem;
+  }
+}
+
+.app-account-kind {
+  margin: 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--app-border);
+  color: var(--app-text);
+  font-weight: 600;
+}
+
+.app-link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--app-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.app-nav-toggle {
+  position: relative;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: var(--app-radius);
+  background: none;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--app-nav-hover);
+  }
+
+  span,
+  span::before,
+  span::after {
+    position: absolute;
+    left: 0.625rem;
+    width: 1rem;
+    height: 2px;
+    background: var(--app-header-text);
+    content: "";
+  }
+
+  span {
+    top: calc(50% - 1px);
+  }
+
+  span::before {
+    top: -5px;
+    left: 0;
+  }
+
+  span::after {
+    top: 5px;
+    left: 0;
+  }
+}
+
+.app-signin-page .app-nav-toggle {
+  display: none;
+}
+
+// Frame: side menu beside the page -------------------------------------------------------
+
+.app-frame {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.app-nav {
+  flex: none;
+  width: var(--app-nav-width);
+  padding: 0.75rem 0;
+  background: var(--app-nav-bg);
+  border-right: 1px solid var(--app-border);
+  overflow-y: auto;
+}
+
+.app-nav-hidden .app-nav {
+  display: none;
+}
+
+.app-nav-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  .app-nav-list {
+    display: none;
+    padding-left: 1rem;
+  }
+}
+
+.app-nav-item {
+  > a {
+    display: block;
+    padding: 0.5rem 1rem;
+    border-left: 3px solid transparent;
+    color: var(--app-nav-text);
+    text-decoration: none;
+
+    &:hover {
+      background: var(--app-nav-hover);
+    }
+  }
+
+  // A sign-out entry posts a form; its button looks like the entries around it.
+  > form {
+    margin: 0;
+
+    > button {
+      display: block;
+      width: 100%;
+      padding: 0.5rem 1rem;
+      border: 0;
+      border-left: 3px solid transparent;
+      background: none;
+      color: var(--app-nav-text);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+
+      &:hover {
+        background: var(--app-nav-hover);
+      }
+    }
+  }
+
+  &.is-open > .app-nav-list {
+    display: block;
+  }
+
+  &.is-current > a {
+    background: var(--app-nav-current);
+    border-left-color: var(--app-accent);
+    font-weight: 600;
+  }
+}
+
+// Page ------------------------------------------------------------------------------------
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  padding: 1rem 1.5rem 2rem;
+}
+
+.app-main-centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-breadcrumb {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--app-muted);
+
+  ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li + li::before {
+    margin-right: 0.25rem;
+    content: "\203A";
+  }
+
+  a {
+    color: inherit;
+  }
+}
+
+.app-page-title {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+%app-region {
+  margin-bottom: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  box-shadow: var(--app-shadow);
+}
+
+.app-intro,
+.app-content {
+  @extend %app-region;
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+.app-report {
+  @extend %app-region;
+  padding: 0.75rem;
+}
+
+.app-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 1rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.app-card {
+  @extend %app-region;
+  margin: 0;
+
+  a {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+.app-card-kind {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--app-muted);
+}
+
+.app-card-title {
+  display: block;
+  margin: 0.125rem 0 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.app-cards .app-card:hover {
+  border-color: var(--app-accent);
+}
+
+// Sign-in -----------------------------------------------------------------------------------
+
+.app-signin {
+  width: 100%;
+  max-width: 26rem;
+
+  form {
+    display: inline-block;
+    margin: 0 0.5rem 0.5rem 0;
+  }
+}
+
+.app-signin-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--app-muted);
+
+  a {
+    display: inline;
+    color: var(--app-accent);
+    text-decoration: underline;
+  }
+}
+
+.app-login-form,
+.app-signin .app-login-form {
+  display: grid;
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0 0 1rem;
+
+  input:not([type="hidden"]) {
+    display: block;
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    background: var(--app-surface);
+    color: var(--app-text);
+    font: inherit;
+  }
+
+  .app-button {
+    justify-self: start;
+    margin-top: 0.5rem;
+  }
+}
+
+.app-login-errors {
+  color: #8c1d18;
+
+  &.validation-summary-valid {
+    display: none;
+  }
+}
+
+.app-button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--app-accent);
+  border-radius: var(--app-radius);
+  background: var(--app-accent);
+  color: var(--app-accent-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.app-denied {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #f2c4bd;
+  border-radius: var(--app-radius);
+  background: #fdecea;
+  color: #8c1d18;
+}
+
+// Footer ------------------------------------------------------------------------------------
+
+.app-footer {
+  display: flex;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-surface);
+  font-size: 0.8125rem;
+  color: var(--app-muted);
+}
+
+.app-footer-user {
+  margin-left: auto;
+}
+
+// Narrow screens: the menu overlays the page instead of sitting beside it --------------------
+
+@media (max-width: 48rem) {
+  .app-nav {
+    position: fixed;
+    top: var(--app-header-height);
+    bottom: 0;
+    left: 0;
+    z-index: 9;
+    box-shadow: var(--app-shadow);
+  }
+
+  .app-main {
+    padding: 1rem;
+  }
+}
+
+// Block pages: the grid, column layouts and regions ----------------------------------------
+
+@import "layouts";
+
+// Block pages: rich text and field placeholders ----------------------------------------------
+
+@import "content";
+
+.application-blocks {
+  --ah-surface: var(--app-surface);
+  --ah-surface-alt: var(--app-bg);
+  --ah-ink: var(--app-text);
+  --ah-muted: var(--app-muted);
+  --ah-border: var(--app-border);
+  --ah-input-border: #747b85;
+  --ah-radius: var(--app-radius);
+  --ah-accent: var(--app-accent);
+}
+
+@import "scss/components/forms";
+
+.app-account-toggle:focus-visible,
+.app-nav-toggle:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+}
