@@ -5,11 +5,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsTestProject>true</IsTestProject>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
-    <!-- AppBlocks supplies the database providers, keeping these tests on the host's versions. -->
+    <!-- AppBlocks leaves these optional drivers to the consuming host. -->
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" />
     <ProjectReference Include="../../src/UmbracoAppHost/UmbracoAppHost.csproj" />
     <Using Include="Xunit" />
   </ItemGroup>

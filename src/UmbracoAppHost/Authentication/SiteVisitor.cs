@@ -7,8 +7,9 @@ using AppBlocks.Authentication;
 namespace UmbracoAppHost.Authentication;
 
 /// <summary>
-/// Who is looking at a website page: a signed-in member, a backoffice Administrator whose login Umbraco
-/// exposes to the website, or nobody. Views resolve it once per request and use it to gate
+/// Who is looking at a website page: a signed-in member, a backoffice user of any group whose login
+/// Umbraco exposes to the website, or nobody. A page under Public Access admits a backoffice user
+/// only when they may edit it, which Umbraco's routing decides before any view runs. Views resolve it once per request and use it to gate
 /// content and to offer sign-in and sign-out, so the report page and the application shell
 /// share one rule. Registered per request; inject it into a view and call <see cref="ResolveAsync"/>.
 /// </summary>
@@ -80,15 +81,15 @@ public sealed class SiteVisitor(IMemberManager memberManager, SsoProviderCatalog
             }
         }
 
-        if (await access.BackOfficeAdministratorAsync(context) is { } administrator)
+        if (await access.BackOfficeUserAsync(context) is { } backOffice)
         {
-            context.User = administrator;
-            var key = administrator.FindFirstValue(ClaimTypes.NameIdentifier);
+            context.User = backOffice;
+            var key = backOffice.FindFirstValue(ClaimTypes.NameIdentifier);
             // The cookie names the account; the account itself supplies what the cookie leaves out.
             var user = Guid.TryParse(key, out var userKey) ? await users.GetAsync(userKey) : null;
-            Name = administrator.Identity?.Name ?? user?.Name ?? key;
-            UserName = user?.Username ?? administrator.Identity?.Name;
-            Email = user?.Email ?? administrator.FindFirstValue(ClaimTypes.Email);
+            Name = backOffice.Identity?.Name ?? user?.Name ?? key;
+            UserName = user?.Username ?? backOffice.Identity?.Name;
+            Email = user?.Email ?? backOffice.FindFirstValue(ClaimTypes.Email);
             IsBackOfficeUser = true;
         }
         return this;

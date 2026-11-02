@@ -15,7 +15,7 @@
                     <span class="app-user-name">@Visitor.Name</span>
                 </summary>
                 <div class="app-account-menu">
-                    <p class="app-account-kind">@(Visitor.IsMember ? "Member account" : "Backoffice Administrator")</p>
+                    <p class="app-account-kind">@(Visitor.IsMember ? "Member account" : "Backoffice account")</p>
                     @if (Visitor.IsBackOfficeUser)
                     {
                         <a href="@(pathBase)/umbraco">Backoffice</a>

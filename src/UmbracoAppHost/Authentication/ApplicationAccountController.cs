@@ -16,18 +16,18 @@ public sealed class ApplicationAccountController(ApplicationAccessPolicy access,
     public async Task<IActionResult> Logout([FromForm] string? returnUrl)
     {
         var member = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
-        var administrator = await access.BackOfficeAdministratorAsync(HttpContext);
-        var principal = member.Succeeded ? member.Principal : administrator;
+        var backOfficeUser = await access.BackOfficeUserAsync(HttpContext);
+        var principal = member.Succeeded ? member.Principal : backOfficeUser;
         if (principal is not null) HttpContext.User = principal;
         try { await antiforgery.ValidateRequestAsync(HttpContext); }
         catch (AntiforgeryValidationException) { return BadRequest(); }
 
         // End both application sessions if present, so signing out cannot silently switch
-        // from a member account to an Administrator account on the next request.
+        // from a member account to a backoffice account on the next request.
         if (member.Succeeded) await members.SignOutAsync();
-        if (administrator is not null)
+        if (backOfficeUser is not null)
         {
-            HttpContext.User = administrator;
+            HttpContext.User = backOfficeUser;
             await backOffice.SignOutAsync();
             await HttpContext.SignOutAsync(Constants.Security.BackOfficeExposedAuthenticationType);
         }

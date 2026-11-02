@@ -1,5 +1,12 @@
 // Shared block structure. Each shell sets the tokens; runtime.css supplies the unthemed fallback.
 .application-blocks {
+  --app-surface-2: var(--ah-surface-alt);
+  --app-surface-3: color-mix(in srgb, var(--ah-border) 35%, var(--ah-surface));
+  --app-border-strong: var(--ah-input-border);
+  --app-accent-strong: color-mix(in srgb, var(--ah-accent) 80%, #000);
+  --app-accent-soft: color-mix(in srgb, var(--ah-accent) 10%, var(--ah-surface));
+  --app-radius-sm: var(--ah-radius);
+
   .app-form {
     max-width: none;
     padding: var(--ah-form-padding, 1.25rem);

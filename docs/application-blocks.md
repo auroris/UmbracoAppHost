@@ -61,11 +61,13 @@ without changing this resolution.
 
 Use Umbraco **Public Access** on the nested application Web Site to choose the allowed member
 groups, login page and access-denied page. Its descendants inherit that protection; the public
-overview remains accessible. Public Access has no backoffice exception: a backoffice user of any
-group, **Administrators** included, gets its login page, and the form, report and paper-report
-endpoints refuse them the same way. An Administrator who needs a protected page signs in there
-with a member account the rule names. When both a member session and an Administrator session
-exist, the member and its page permissions decide.
+overview remains accessible. Public Access admits, besides the members it names, a backoffice user
+who may edit the page: Umbraco's **Update** permission on it, through their user groups and within
+their start nodes. Any other backoffice user gets its login page, and the form, report and
+paper-report endpoints answer the same way, so such a user signs in there with a member account
+the rule names. When both sessions exist, a backoffice user who may edit the page can view it
+even when the member is denied. Block endpoints evaluate member access first, so viewing the
+page does not grant access to every block's data or operations.
 The shell choice does not grant or remove access. Public Access rules must be configured for
 each installation: the installed uSync version does not export them. Keep the login and
 access-denied pages outside the protected branch.
@@ -108,29 +110,32 @@ with the page's CSS and JavaScript fields.
    `id`. The report's create link opens the page without a key; its edit link opens
    `orders-form?id=4`.
 6. Publish, then use Umbraco **Public Access** on the page or its ancestor to select the
-   member groups that can enter it. A page it protects admits those members and nobody else,
-   backoffice users of any group included. The form, report and paper-report endpoints accept
-   the same people. On a page it leaves open, a signed-in backoffice user reaches them without a
-   member account, and whatever is behind the block decides. When both sessions exist, the member
-   and its page permissions decide.
+   member groups that can enter it. A protected page also admits a backoffice user who may edit
+   it, including when a concurrent member session is denied. Form, report and paper-report
+   endpoints evaluate member access first when both sessions exist, then apply their own data
+   permissions. On an open page, a signed-in backoffice user reaches the blocks without a
+   member account, and whatever is behind each block decides.
 
 Member sign-in first tries the configured identity server. If SSO fails, it returns to
 Umbraco's username/password form without retrying automatically. The form is also available
 directly with `?sso-local=1`, and appears immediately when no member identity server is enabled.
 New SSO accounts have generated passwords; administrators can set usable local passwords in
-**Members** for fallback access. Backoffice Administrators can instead sign in at `/umbraco` and return
-to the application's pages that Public Access leaves open; they need no member account there, and the
-sample's forms and reports accept them. A page Public Access protects needs a member account it names,
-for an Administrator too. The application shell and the sample's Orders class look for **Administrators**
-in particular, so other backoffice groups, including Interactive Report Administrators, do not get them.
+**Members** for fallback access. Backoffice users can instead sign in at `/umbraco` and return to
+the application's pages that Public Access leaves open, and to the protected pages they may edit;
+they need no member account there. Any other page Public Access protects needs a member account it
+names. The sample's Orders class looks for **Administrators** in particular, so other backoffice
+groups, including Interactive Report Administrators, do not get it.
 
 The account menu at the top right identifies the active account as **Member account** or
-**Backoffice Administrator**, and includes **Sign out**. When both sessions exist, the member
-account is used, including its page permissions. Sign out ends both application sessions so
-the next request cannot silently switch to the Administrator account.
+**Backoffice account**, and includes **Sign out**. When both sessions exist, the menu shows the
+member account; the backoffice editor's permission can still admit the page. Sign out ends both application sessions so
+the next request cannot silently switch to the backoffice account.
 
 The available fields are text box, text area, number, date, time, date and time, checkbox,
-select, and display value. Labels and help text can be overridden on a page. Resource
+select, shuttle, color picker, and display value. Shuttle stores ordered choices as one CSV
+string; Color picker stores a six-digit hex colour. See AppBlocks' [Shuttle](../../AppBlocks/docs/shuttle.md)
+and [Color picker](../../AppBlocks/docs/color-picker.md) guides. The [Anti-spam](../../AppBlocks/docs/anti-spam.md)
+block is also available inside forms. Labels and help text can be overridden on a page. Resource
 validation is always enforced; a block can additionally require a value or make a field
 read only, and hide it, give it a default value, a width and a placeholder (see
 [Field properties](#field-properties)). Dates are date-only ISO values, times are local times without a zone, and date/time
@@ -274,6 +279,7 @@ case:
 | `:USER_NAME` | The member's or backoffice user's username |
 | `:USER_KEY` | The application's key for the account: the member id, or `backoffice:` and the user id |
 | `:USER_EMAIL` | The account's email address |
+| `:APP.name` | A value supplied by the application's registered `IBindVariableProvider` for this page and block |
 | `:NOW` | The web server's date and time, written as the field's kind is: `yyyy-MM-dd` for a date, `HH:mm` for a time, an ISO date and time with its offset for a date and time (shown in the browser's zone), `yyyy-MM-dd HH:mm` for text. A number or a checkbox has no "now" |
 | `:PARAM.name` | The `name` parameter of the page's address, such as `note` in `?note=Rush` |
 
@@ -413,15 +419,20 @@ window, and follow a bar to its order.
 
 ## Adding a data source
 
-A data source gives a form a table or a SELECT without code. In **Content**, create a **SQL data
+A data source gives reports, lists, tabular forms and schedules a table or a SELECT. In **Content**, create a **SQL data
 source** beneath **Data sources** (create that root first on a site that has none), fill in its
-alias, connection, row source and key columns, choose what it allows, and publish. Publishing
+alias, connection, row source and key columns, choose its required **Access** value and allowed operations, and publish. Publishing
 reads the schema through the connection and refuses the node with every reason at once when
 something does not fit: an unregistered connection, a missing table or column, a key that is not
 the table's primary or unique key, a version column that is not a whole number, an unknown bind
-variable, or a custom statement that does not compile. The published data source appears in the
-Form Interface's resource list beside the C# resources, and the field picker lists its columns with
-their kinds; a page bound to it is checked against those columns when it is published.
+variable, or a custom statement that does not compile. Form Interface selects a registered C#
+form class; a data source is selected by the report, list, tabular form or schedule that reads it.
+
+**Public** allows anonymous reads where page access permits them. **Not public** requires a
+Member or backoffice User. **Specific groups** requires at least one read group. Leaving Access
+empty is an error even when groups are selected. The saved Orders sources use **Not public**;
+anonymous visitors cannot write to any SQL data source. Queries and restrictions with `:USER_*`
+binds require sign-in even for a Public source.
 
 The [README's Data sources section](../README.md#data-sources) describes every property, the
 bind variables, the field rules, the dialects and the safety model. In short:
@@ -613,6 +624,8 @@ and row-specific report action visibility remain later work (see the
 [design's work breakdown](design-blocks-and-data-sources.md#5-work-breakdown)).
 
 Optional PostgreSQL/Oracle provider tests live in `tests/UmbracoAppHost.ProviderTests`.
+That project references `Npgsql` and `Oracle.ManagedDataAccess.Core` explicitly, as a host
+using those databases must now do; AppBlocks leaves optional drivers to its consumer.
 Set `UMBRACOAPPHOST_TEST_POSTGRES`, `UMBRACOAPPHOST_TEST_ORACLE` or
 `UMBRACOAPPHOST_TEST_ORACLE11G` to a test connection string and run that project. Each test
 creates and removes its own uniquely named table (and an Oracle 11g sequence); it does not

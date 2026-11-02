@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
 using AppBlocks;
+using AppBlocks.DataSources;
 using AppBlocks.Documents;
 using AppBlocks.InteractiveReports;
 using AppBlocks.Setup;
@@ -60,13 +61,15 @@ public sealed class DefinitionOwnershipTests
         }
     }
 
-    [Fact]
-    public void The_host_grid_offers_every_block_of_the_schema_grid_unchanged()
+    [Theory]
+    [InlineData("ApplicationApplicationBlocks.config")]
+    [InlineData("WebsiteBlocks.config")]
+    public void The_host_grids_offer_every_schema_block_with_its_field_settings(string file)
     {
         var key = Guid.Parse("97b36051-4abe-e750-6667-9cb7ee6a9a99");
         JsonNode Config(XElement definition) => JsonNode.Parse(definition.Element("Config")!.Value)!;
         var schema = Config(SchemaDefinitions("DataTypes").Single(definition => Key(definition) == key));
-        var host = Config(XElement.Load(Path.Combine(Export, AppBlocksDefinitions.HostOwned[key])));
+        var host = Config(XElement.Load(Path.Combine(Export, "DataTypes", file)));
         JsonNode Block(JsonNode config, string element) => config["blocks"]!.AsArray().Single(b => b!["contentElementTypeKey"]!.GetValue<string>() == element)!;
 
         Assert.Equal(schema["gridColumns"]!.GetValue<int>(), host["gridColumns"]!.GetValue<int>());
@@ -75,7 +78,33 @@ public sealed class DefinitionOwnershipTests
         foreach (var block in schema["blocks"]!.AsArray())
         {
             var element = block!["contentElementTypeKey"]!.GetValue<string>();
-            Assert.True(JsonNode.DeepEquals(block, Block(host, element)), $"The host grid's {block["label"]} block differs from the schema's.");
+            var expected = block.DeepClone().AsObject();
+            var actual = Block(host, element).DeepClone().AsObject();
+            if (file == "WebsiteBlocks.config")
+            {
+                // Website areas also admit native forms and reports. Their area keys and allowed blocks belong to
+                // the host; field settings and every other schema setting must still follow AppBlocks.
+                expected.Remove("areas");
+                actual.Remove("areas");
+                if (element == "322396a8-4598-4ff5-8312-6ee2cdf866cc") expected["allowInAreas"] = true;
+            }
+            Assert.True(JsonNode.DeepEquals(expected, actual), $"{file}'s {block["label"]} block differs from the schema's.");
+        }
+    }
+
+    [Fact]
+    public void Every_sample_data_source_explicitly_requires_sign_in()
+    {
+        var sources = Directory.EnumerateFiles(Path.Combine(Export, "Content"), "*.config")
+            .Select(XElement.Load).Where(node => Text(node.Element("Info")!, "ContentType") == DataSourceSchema.SqlAlias).ToArray();
+        Assert.NotEmpty(sources);
+        foreach (var node in sources)
+        {
+            object? Value(string alias) => node.Element("Properties")?.Element(alias)?.Element("Value")?.Value;
+            var errors = new List<string>();
+            var source = DataSourceDefinition.Read(Key(node), Alias(node), Value, _ => [], errors);
+            Assert.True(source is not null, $"{Alias(node)}: {string.Join("; ", errors)}");
+            Assert.Equal(DataSourceAccess.NotPublic, source.Access);
         }
     }
 

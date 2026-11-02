@@ -96,6 +96,7 @@ public sealed class DataSourceHttpTests
             """);
         var source = contents.Create("Pilot notes", ApplicationStarter.DataSourceRootKey, DataSourceSchema.SqlAlias);
         foreach (var (alias, value) in new (string, object)[] {
+            ("access", "Not public"),
             ("alias", "pilot-notes"), ("connection", SampleReport.Connection), ("source", "PILOT_NOTES"), ("keyColumns", "NOTE_ID"),
             ("concurrency", "VERSION"), ("allowInsert", 1), ("allowUpdate", 1), ("rowRestriction", "OWNER_SID = :USER_SID"),
             ("insertDefaults", "OWNER_SID = :USER_SID\nTOPIC = :PARAM.topic"), ("writeGroups", pilots.Id.ToString()),
@@ -131,6 +132,7 @@ public sealed class DataSourceHttpTests
             var publisher = publishScope.ServiceProvider.GetRequiredService<IContentService>();
             var reportSource = publisher.Create("Pilot notes report source", ApplicationStarter.DataSourceRootKey, DataSourceSchema.SqlAlias);
             reportSource.SetValue("alias", "pilot-notes-report-source");
+            reportSource.SetValue("access", "Not public");
             reportSource.SetValue("connection", SampleReport.Connection);
             reportSource.SetValue("source", "SELECT * FROM PILOT_NOTES WHERE :PARAM.pageSize IS NULL OR TOPIC = :PARAM.pageSize");
             reportSource.SetValue("rowRestriction", "OWNER_SID = :USER_SID");

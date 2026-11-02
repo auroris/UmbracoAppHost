@@ -91,7 +91,7 @@ public sealed class BlocksHttpTests
         Assert.Contains("data-field=\"customer\"", html);
         Assert.DoesNotContain("invalid resource", html);
         Assert.Contains("<details class=\"app-account\">", html);
-        Assert.Contains(administrator ? "Backoffice Administrator" : "Member account", html);
+        Assert.Contains(administrator ? "Backoffice account" : "Member account", html);
         Assert.Contains("Sign out", html);
         var loaded = await forms.LoadAsync("4");
         Assert.True(loaded.IsSuccess, loaded.Body.GetRawText());
@@ -109,8 +109,9 @@ public sealed class BlocksHttpTests
         var access = services.GetRequiredService<IPublicAccessService>();
         var entry = new PublicAccessEntry(report, form, form, [new PublicAccessRule { RuleType = Constants.Conventions.PublicAccess.MemberRoleRuleType, RuleValue = "No test members" }]);
         Assert.True(access.Save(entry).Success);
-        // Public Access is the baseline: a backoffice Administrator it does not name is refused like a member it does not name.
-        Assert.False((await client.GetAsync($"{site.PathBase}/api/reports/{reportName}/default")).IsSuccessStatusCode);
+        // Public Access is the baseline: a member it does not name is refused, while a backoffice user who
+        // may edit the page passes it, as the administrator may edit every page.
+        Assert.Equal(administrator, (await client.GetAsync($"{site.PathBase}/api/reports/{reportName}/default")).IsSuccessStatusCode);
         access.Delete(entry);
 #pragma warning disable CS0618
         Assert.True(contents.Unpublish(report).Success);
@@ -139,7 +140,8 @@ public sealed class BlocksHttpTests
             await site.SetPasswordAsync(editor, password);
             (await client.PostAsJsonAsync(site.PathBase + "/umbraco/management/api/v1/security/back-office/login",
                 new { username = editor.Username, password })).EnsureSuccessStatusCode();
-            Assert.Contains("loginModel.Username", await client.GetStringAsync(pageUrl));
+            // Any backoffice user is a signed-in visitor on an open page; the sample's Orders form still wants Administrators.
+            Assert.Contains("Backoffice account", await client.GetStringAsync(pageUrl));
             Assert.Equal(HttpStatusCode.Forbidden, (await forms.LoadAsync()).Response.StatusCode);
 
             var principal = new ClaimsPrincipal(new ClaimsIdentity([
@@ -157,7 +159,7 @@ public sealed class BlocksHttpTests
             // Current group membership controls access, not stale or forged role claims in a ticket.
             editor.AddGroup((await groups.GetAsync(Constants.Security.AdminGroupAlias))!.ToReadOnlyGroup());
             users.Save(editor);
-            Assert.Contains("Backoffice Administrator", await client.GetStringAsync(pageUrl));
+            Assert.Contains("Backoffice account", await client.GetStringAsync(pageUrl));
             Assert.Equal(HttpStatusCode.OK, (await forms.LoadAsync()).Response.StatusCode);
             Assert.Equal(200, (await resource.LoadAsync("4", context, default)).Status);
             var created = await resource.CreateAsync(input, context, default);

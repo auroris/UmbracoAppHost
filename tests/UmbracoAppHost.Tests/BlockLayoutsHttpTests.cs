@@ -205,7 +205,7 @@ public sealed class BlockLayoutsHttpTests
         foreach (var (field, label) in new[] { ("customer", "Customer"), ("region", "Region"), ("status", "Status"), ("amount", "Amount"), ("orderDate", "Order date"), ("notes", "Notes") })
         {
             Assert.Contains($"data-field=\"{field}\"", html);
-            Assert.Matches($"<label for=\"field-[0-9a-f]{{32}}\">{label}\\s*<", html);
+            Assert.Matches($"<label id=\"field-([0-9a-f]{{32}})-label\" for=\"field-\\1\">{label}\\s*<", html);
         }
         Assert.Matches("<div class=\"ah-grid umb-block-grid__layout-container\" data-grid-columns=\"12\"", html);
     }

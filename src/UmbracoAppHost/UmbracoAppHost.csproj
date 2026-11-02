@@ -115,7 +115,8 @@
            Text="Umbraco.Cms is $(_AppHostUmbracoVersion) in UmbracoAppHost's Directory.Packages.props but '$(_AppBlocksUmbracoVersion)' as AppBlocksUmbracoVersion in $(AppBlocksRoot)\Directory.Build.props. Change both together." />
     <Error Condition="'$(_AppHostDevelopmentModeVersion)' != '$(_AppHostUmbracoVersion)'"
            Text="Umbraco.Cms.DevelopmentMode.Backoffice is $(_AppHostDevelopmentModeVersion) but Umbraco.Cms is $(_AppHostUmbracoVersion) in UmbracoAppHost's Directory.Packages.props. Change both together." />
-    <Error Condition="'$(_AppBlocksSqliteVersions)' != '$(_AppHostSqliteVersion)'"
+    <!-- AppBlocks stopped pinning Microsoft.Data.Sqlite on 2026-11-01 (it comes with Umbraco.Cms); the check applies only while a project still pins it. -->
+    <Error Condition="'$(_AppBlocksSqliteVersions)' != '' and '$(_AppBlocksSqliteVersions)' != '$(_AppHostSqliteVersion)'"
            Text="Microsoft.Data.Sqlite is $(_AppHostSqliteVersion) in UmbracoAppHost's Directory.Packages.props but '$(_AppBlocksSqliteVersions)' in the AppBlocks projects under $(AppBlocksRoot)\src. Change both together." />
     <Error Condition="'$(_AppBlocksEmbeddedVersions)' != '$(_AppHostEmbeddedVersion)'"
            Text="Microsoft.Extensions.FileProviders.Embedded is $(_AppHostEmbeddedVersion) in UmbracoAppHost's Directory.Packages.props but '$(_AppBlocksEmbeddedVersions)' in the AppBlocks projects under $(AppBlocksRoot)\src. Change both together." />

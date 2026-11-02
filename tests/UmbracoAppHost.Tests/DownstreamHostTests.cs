@@ -278,6 +278,9 @@ public sealed class DownstreamHostTests
                 <alias>
                   <Value><![CDATA[downstream.rows]]></Value>
                 </alias>
+                <access>
+                  <Value><![CDATA[Not public]]></Value>
+                </access>
                 <connection>
                   <Value><![CDATA[UmbracoDb]]></Value>
                 </connection>

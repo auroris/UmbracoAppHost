@@ -172,6 +172,14 @@ Forms, interactive reports, their reusable blocks and database-source runtime no
 policy, page shells, branding and sample content. AppBlocks itself uses native Forms container
 and Interactive Report blocks on ordinary content pages, with report settings stored on the blocks.
 
+The application and website grids include the current AppBlocks fields, including
+[Shuttle](../AppBlocks/docs/shuttle.md), [Color picker](../AppBlocks/docs/color-picker.md) and
+[Anti-spam](../AppBlocks/docs/anti-spam.md). Schedules support markers, colours, descriptions and
+the Jump to menu; see the [Schedule guide](../AppBlocks/docs/schedule.md). Both shells map their
+theme colours to the runtime's tokens. AppBlocks installs schema changes on fresh databases;
+after updating the sibling checkout, rebuild and reset a disposable reference to receive the
+complete schema. Preserve any reference edits before resetting it.
+
 ## uSync exports and the saved export
 
 The reference launcher's `appsettings.json` sets `InstanceRoot` to `../../reference`.
@@ -350,13 +358,15 @@ Failed attempts return to Umbraco's built-in member username/password form, pres
 original page and query parameters. The local form also offers an explicit SSO retry; adding
 `?sso-local=1` to a login page selects it directly. Public pages remain public. When no identity
 server is enabled for members, the local form and any other configured provider buttons are
-shown immediately. Umbraco's Public Access is the baseline and has no backoffice exception: a page
-it protects admits the members it names and nobody else, so an Administrator who needs that page
-signs in there with a member account it names. On a page it leaves open, a signed-in backoffice user
+shown immediately. Umbraco's Public Access is the baseline: a page it protects admits the members it
+names and a backoffice user who may edit the page (Umbraco's **Update** permission on it, within
+their start nodes), and nobody else, so any other backoffice user who needs that page signs in there
+with a member account it names. On a page it leaves open, a signed-in backoffice user of any group
 needs no member account, and whatever is behind each block decides: the sample's Orders form accepts
 users in **Administrators**. The account menu identifies which account the application is using and
-provides **Sign out**. If both sessions exist, the member identity and its page permissions take
-precedence; sign-out ends both application sessions. See
+provides **Sign out**. If both sessions exist, a backoffice user who may edit a protected page can
+view it even when the member is denied. The account menu uses the member identity, and block
+endpoints still evaluate member access first. Sign-out ends both application sessions. See
 [Application forms and report blocks](docs/application-blocks.md).
 
 How the pieces fit:
@@ -773,27 +783,26 @@ The uSync baseline supplies the **Report Page** document type and its template r
 supplies `Views/ReportPage.cshtml`, and Umbraco registers an editable copy in the host's Views
 folder. The content tree selects its layout. It embeds `<interactive-report>`
 for a signed-in member or backoffice user and shows one sign-in button per enabled provider
-otherwise, so administrators need no member record on a page that Umbraco Public Access leaves
-open; on a page it protects, its rule decides before the view runs. The base's `SiteVisitor` service resolves that once per request (member,
+otherwise, so backoffice users need no member record on a page that Umbraco Public Access leaves
+open or that they may edit; on any other page it protects, its rule decides before the view runs. The base's `SiteVisitor` service resolves that once per request (member,
 exposed backoffice login, or nobody) for any view that injects it. Any content page of type
 Report Page renders the report named in its `reportName` property; the saved export includes
 one for its sample report.
 
 ## Data sources
 
-A data source lets a form read and write a table, or a SELECT, without C#: it is a content node,
-and one engine runs every node. Under a **Data sources** root (document type `dataSources`: at the
+A data source lets reports, lists, tabular forms and schedules read a table or a SELECT;
+tabular forms can also write through it. Under a **Data sources** root (document type `dataSources`: at the
 root, no template, never shown on the site) each **SQL data source** (`sqlDataSource`) node defines
 one. Being content, data sources are versioned, published, exported by uSync, and guarded by the
-same user group permissions and start nodes as pages. Published nodes join the C# resources in the
-form resource registry by alias, so a Form interface selects one exactly as it selects a C#
-resource, the field picker lists its columns, and `/api/forms` runs it with the same antiforgery,
-validation, merge-on-update and audit logging. The engine lives in `src/UmbracoAppHost/DataSources/`
+same user group permissions and start nodes as pages. Blocks select a published data source by
+alias or key. Form Interface selects a registered C# form class, whose code owns its persistence
+and authorization. The data source engine lives in `AppBlocks/DataSources/`
 and its design in [section 4 of the design](docs/design-blocks-and-data-sources.md#4-data-sources).
 
 | Property | Format | Meaning |
 |---|---|---|
-| Alias | text | What a Form interface selects, such as `orders`. Must not repeat another data source or a C# resource |
+| Alias | text | What a report, list, tabular form or schedule selects, such as `orders`. Must not repeat another data source or a C# resource |
 | Connection | text | A connection from Settings → AppBlocks → Connections: `ReportsSampleDb`, `UmbracoDb`, or one a site adds through the callback of `AddUmbracoAppHost`. Credentials stay in configuration; the data source can do only what the connection's database account may |
 | Row source | table name or SELECT | `ORDERS`, `dbo.ORDERS`, or a SELECT without `ORDER BY`. A SELECT writes to the one table its key columns come from; its other columns are read only |
 | Key columns | comma-separated | The primary key or a unique key; required when writes are allowed. A key of several columns travels in URLs as its values joined by `\|`, with `\|` and `%` inside a value written `%7C` and `%25` |
@@ -804,7 +813,8 @@ and its design in [section 4 of the design](docs/design-blocks-and-data-sources.
 | Insert defaults | lines `COLUMN = value` | A bind variable, a `'quoted'` or plain literal, or `NULL`. A new record starts with these values, and an insert uses them for fields the form does not send |
 | Audit columns | lines, optional | `createdBy`, `createdAt`, `updatedBy`, `updatedAt` = a column. The engine writes the username and the server's local time; forms cannot change them |
 | Row restriction | predicate, optional | Added to every fetch and write, such as `OWNER_SID = :USER_SID` or `REGION IN (:USER_GROUPS)` |
-| Read groups, Write groups | member group pickers | Empty read groups leave reading to the page's access; empty write groups leave writing to whoever may read. Setting a group refuses backoffice Users, including Administrators; use an `IDataSourcePolicy` when they need access. The groups in `Accounts:EnsureMemberGroups` are created before every uSync import, the first boot's included, so an exported data source that names one keeps it on a fresh site |
+| Access | required choice | **Public** allows anonymous reads where the page permits them; **Not public** requires a signed-in Member or backoffice User; **Specific groups** requires at least one read group. An empty value is an error. The saved Orders sources use **Not public** |
+| Read groups, Write groups | member group pickers | Read groups apply in **Specific groups** mode; write groups may also read. Empty write groups allow signed-in readers to write, subject to allow flags and policies. Anonymous readers cannot write. Member groups refuse backoffice Users, including Administrators. The groups in `Accounts:EnsureMemberGroups` are created before every uSync import so exported group selections resolve on a fresh site |
 | Custom statements | sections, advanced | Lines `-- insert`, `-- update` and `-- delete` start statements that replace the generated ones; each runs whole with bound parameters |
 
 **Fields.** Every column of the row source is a field, named after its column (`ORDER_DATE`
@@ -829,7 +839,8 @@ legacy data the rules would refuse does not block saving another field.
 | `:USER_SID` | The Windows SID the account is linked to (its external login key); NULL when the account has no external identity link | yes | yes | yes |
 | `:USER_NAME`, `:USER_EMAIL` | The member's or backoffice user's username and email | yes | yes | yes |
 | `:USER_KEY` | The application's key for the account: the member id, or `backoffice:` and the user id | yes | yes | yes |
-| `:USER_GROUPS` | The member groups (an Administrator's backoffice groups), only as `IN (:USER_GROUPS)` | yes | yes | statements only |
+| `:USER_GROUPS` | The current Member or backoffice User's groups, only as `IN (:USER_GROUPS)` | yes | yes | statements only |
+| `:APP.name` | A server-computed value from a registered `IBindVariableProvider`, such as the page's tenant | yes | yes | yes |
 | `:NOW` | The web server's local date and time | yes | yes | yes |
 | `:PARAM.name` | A query parameter of the form request | yes | no | yes |
 | `:FIELD.alias` | The record's current or submitted value of a field | no | no | yes |
@@ -837,8 +848,14 @@ legacy data the rules would refuse does not block saving another field.
 The restriction refuses `:PARAM` and `:FIELD` because the caller controls them, so those values
 cannot establish who may access a row. The form runtime forwards the page's query parameters on
 reads and writes. `/api/forms` retains its existing bound of 50 names and 4000 characters each.
+Queries or restrictions using `:USER_*` require sign-in even when Access is Public.
+Application bind providers also supply field defaults and receive the page/block context;
+see [application bind variables](../AppBlocks/docs/business-rules.md).
 
 **Dialects.** SQLite, SQL Server, PostgreSQL and Oracle (12c and 11g) have read and write builders.
+SQLite and SQL Server drivers come with Umbraco. A consuming web project must reference
+`Npgsql` for PostgreSQL or `Oracle.ManagedDataAccess.Core` for Oracle; AppBlocks no longer
+ships those optional drivers. The provider test project references both explicitly.
 The engine reads through the Interactive Reports
 connection factory and takes the connection's dialect from it. Writes are generated from the
 schema: `INSERT` returning a new key through `RETURNING` (SQLite) or `OUTPUT INSERTED` into a table
@@ -965,7 +982,8 @@ installing a browser runtime; `PressroomRoot` can override the source dependency
 `/api/paper-reports/{node-key}` rechecks Public Access and the data source's rules, renders the
 selected template, embeds stylesheets and assets, and streams the PDF. A paper report always
 renders for a person, so the download needs someone signed in, even for a public node: a member
-Public Access admits, or on a node it leaves open a backoffice user. Anyone else receives a 403
+Public Access admits, a backoffice user who may edit the node, or on a node it leaves open any
+backoffice user. Anyone else receives a 403
 problem response asking them to sign in. Without a configured service, when it cannot render, or with `?format=html`, it opens
 the same self-contained HTML inline for browser printing. Print actions open a new window/tab;
 both HTML and PDF are delivered inline. Pressroom failures use Umbraco's normal logging pipeline.
@@ -1024,8 +1042,8 @@ the limit is refused with 413 before the body is read, and the request body is c
 so an undeclared one is cut off; a type the block does not accept is 415.
 
 Every call is authorized the way a form call is: the page's access first (a member Public Access
-admits, and with no Public Access a backoffice user or an anonymous visitor reaches the resource
-too), then the owning record's resource must load the record for the caller, which is what
+admits, a backoffice user who may edit the page, and with no Public Access any backoffice user or
+an anonymous visitor reaches the resource too), then the owning record's resource must load the record for the caller, which is what
 grants reading. Writing is allowed to whoever is signed in and may read, unless the resource
 implements `IAttachmentOwner` and says otherwise. An anonymous visitor writes only when the resource
 implements it and allows them. The data source engine implements it, so a data source's write
@@ -1130,7 +1148,7 @@ A **Schedule** block (`appSchedule`, in the block catalogue's **Content** group)
 against time: a tape chart of rooms and the stays in them, an activity calendar, vehicles and
 their allocations. It reads two sources and renders one table on the server, with the rows of
 the first source down the side and the bars of the second across a window of days or hours. The
-code is in `src/UmbracoAppHost/Schedules/`; the partial is
+code is in `AppBlocks/Schedules/`; the partial is
 `Views/Partials/ApplicationBlocks/Schedule.cshtml`.
 
 **Rows source** and **Bars source** each name a published report definition that selects a data
@@ -1144,6 +1162,12 @@ row. Column names and field aliases match in any letter case, so `ROOM_NO` mappe
 are missing, as it refuses a source that is not published or cannot read its schema. A saved
 export's first import publishes the nodes of one level in sort order, so give the source nodes
 a lower sort order than the schedule's page, as the sample does, or the page stays unpublished.
+
+Both sources may also supply `color`, `textColor` and `description`. A rows source's
+`orientation` column can turn its bars into vertical markers across the schedule; descriptions
+open in a details popover. The Jump to menu offers months and quarters. Anonymous readers can
+see a schedule only when both sources are Public and neither requires `:USER_*` values.
+The sample's sources remain Not public. See the current [Schedule guide](../AppBlocks/docs/schedule.md).
 
 The window comes from the page's address, `?from=2026-06-01&to=2026-06-30`, or else from the
 block's **Days before today** and **Days after today** (7 and 14 unless set); both dates are

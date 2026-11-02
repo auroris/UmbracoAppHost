@@ -232,17 +232,16 @@ public sealed class WebPagesHttpTests
         Assert.True(access.Save(protection).Success);
         var referenceProtection = new PublicAccessEntry(privateReference, login, deniedPage, [new PublicAccessRule { RuleType = Constants.Conventions.PublicAccess.MemberUsernameRuleType, RuleValue = member.Username }]);
         Assert.True(access.Save(referenceProtection).Success);
-        // Native Public Access is the baseline: a backoffice Administrator it does not name gets its login page, like any other backoffice group.
+        // Public Access admits a backoffice user who may edit the page, including the administrator.
         var administratorResponse = await administrator.GetAsync("/private-tools/private-guide/");
         var administratorGuide = await administratorResponse.Content.ReadAsStringAsync();
         AssertNoStore(administratorResponse);
         if (administratorResponse.Headers.Location is { } administratorRedirect) administratorGuide = (await Page(administrator, administratorRedirect.ToString())).Html;
-        Assert.DoesNotContain("private-guide-marker", administratorGuide);
-        Assert.Contains("public-login-marker", administratorGuide);
-        Assert.Contains("loginModel.Username", administratorGuide);
+        Assert.Contains("private-guide-marker", administratorGuide);
+        Assert.DoesNotContain("public-login-marker", administratorGuide);
         var administratorReference = (await Page(administrator, "/private-reference/")).Html;
-        Assert.DoesNotContain("private-reference-marker", administratorReference);
-        Assert.Contains("public-login-marker", administratorReference);
+        Assert.Contains("private-reference-marker", administratorReference);
+        Assert.DoesNotContain("public-login-marker", administratorReference);
         var users = services.GetRequiredService<IUserService>();
         var groups = services.GetRequiredService<IUserGroupService>();
         var websiteEditor = users.CreateUserWithIdentity("website-editor", "website-editor@example.invalid");
@@ -257,8 +256,8 @@ public sealed class WebPagesHttpTests
         var editorResponse = await editor.GetAsync("/private-tools/private-guide/");
         var editorHtml = await editorResponse.Content.ReadAsStringAsync();
         if (editorResponse.Headers.Location is { } editorRedirect) editorHtml = (await Page(editor, editorRedirect.ToString())).Html;
-        Assert.Contains("public-login-marker", editorHtml);
-        Assert.DoesNotContain("private-guide-marker", editorHtml);
+        Assert.Contains("private-guide-marker", editorHtml);
+        Assert.DoesNotContain("public-login-marker", editorHtml);
         anonymous.DefaultRequestHeaders.IfNoneMatch.Add(previousReferenceTag);
         var referenceSignIn = await Page(anonymous, "/private-reference/");
         anonymous.DefaultRequestHeaders.IfNoneMatch.Clear();
@@ -298,12 +297,13 @@ public sealed class WebPagesHttpTests
         Assert.Contains("access-denied-marker", deniedReference.Html);
         Assert.DoesNotContain("private-reference-marker", deniedReference.Html);
         AssertNoStore(deniedReference.Response);
-        // A member session keeps precedence: its denial stands even beside an Administrator's cookie.
+        // A backoffice user who can edit the page may view it even when a concurrent member session is denied.
         using var both = Client(address, "en.website.test", useCookies: false);
         both.DefaultRequestHeaders.Add("Cookie", Cookies(memberSignIn) + "; " + Cookies(signIn));
         var bothReference = await Page(both, "/private-reference/");
-        Assert.Contains("access-denied-marker", bothReference.Html);
-        Assert.DoesNotContain("private-reference-marker", bothReference.Html);
+        Assert.Contains("private-reference-marker", bothReference.Html);
+        Assert.DoesNotContain("access-denied-marker", bothReference.Html);
+        AssertNoStore(bothReference.Response);
 
         // An ancestor's edit refreshes a page's cache validators, while its visible date reports the page's own change.
         using var visitor = Client(address, "en.website.test");

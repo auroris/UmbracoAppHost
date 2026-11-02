@@ -5,6 +5,15 @@
 
 // The shared forms, attachments, tabular and schedule styles read these.
 .application-blocks {
+  // AppBlocks' runtime also uses these for shuttle/color controls, schedule details and markers.
+  --app-surface: var(--site-surface);
+  --app-text: var(--site-ink);
+  --app-muted: var(--site-muted);
+  --app-border: var(--site-border);
+  --app-accent: var(--site-accent);
+  --app-on-accent: var(--site-accent-text);
+  --app-radius: var(--site-radius);
+  --app-danger: var(--site-danger);
   --ah-surface: var(--site-surface);
   --ah-surface-alt: var(--site-surface-alt);
   --ah-ink: var(--site-ink);

@@ -2,6 +2,7 @@ ContentTypes/appactions.config
 ContentTypes/appantispam.config
 ContentTypes/appattachments.config
 ContentTypes/appcheckbox.config
+ContentTypes/appcolor.config
 ContentTypes/appcolumns.config
 ContentTypes/appcolumnssettings.config
 ContentTypes/appcss.config
@@ -22,6 +23,7 @@ ContentTypes/apprichtext.config
 ContentTypes/appschedule.config
 ContentTypes/appscript.config
 ContentTypes/appselect.config
+ContentTypes/appshuttle.config
 ContentTypes/apptabular.config
 ContentTypes/apptext.config
 ContentTypes/apptextarea.config
@@ -39,6 +41,7 @@ DataTypes/ApplicationAntiSpamTheme.config
 DataTypes/ApplicationBoolean.config
 DataTypes/ApplicationColumnSplit.config
 DataTypes/ApplicationCSS.config
+DataTypes/ApplicationDataSourceAccess.config
 DataTypes/ApplicationDataSourcePicker.config
 DataTypes/applicationdatasourcetest.config
 DataTypes/ApplicationFieldBinding.config

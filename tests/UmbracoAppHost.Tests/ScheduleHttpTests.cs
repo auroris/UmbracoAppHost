@@ -50,7 +50,9 @@ public sealed class ScheduleHttpTests
         Assert.Contains("<tr class=\"app-schedule-group-title\"><th scope=\"rowgroup\" colspan=\"23\">", html);
         Assert.Contains("--ah-lane: 1", html);
         Assert.Contains("app-schedule-bar--open", html);
-        Assert.Matches("<a class=\"app-schedule-bar app-schedule-kind-\\d[^\"]*\" href=\"/orders-form/\\?id=\\d+\" style=\"--ah-span: \\d+; --ah-lane: \\d+\" data-key=\"\\d+\" data-kind=\"[A-Z]+\">Order \\d+<span class=\"app-schedule-bar__details\">: ", html);
+        Assert.Matches("<a class=\"app-schedule-bar app-schedule-kind-\\d[^\"]*\" href=\"/orders-form/\\?id=\\d+\" style=\"--ah-span: \\d+; --ah-lane: \\d+\" data-key=\"\\d+\" data-kind=\"[A-Z]+\"><span class=\"app-schedule-bar__label\">Order \\d+</span><span class=\"app-schedule-bar__details\">: ", html);
+        Assert.Contains("app-schedule-jump", html);
+        Assert.Contains("Jump to", html);
         Assert.Contains(" onward, PENDING</span>", html);
         Assert.Contains("<ul class=\"app-schedule-legend ah-schedule__legend\" aria-label=\"Legend\">", html);
         Assert.Contains("PENDING</li>", html);
