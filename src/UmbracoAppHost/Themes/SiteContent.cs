@@ -2,6 +2,7 @@ using Umbraco.Cms.Core.Models.PublishedContent;
 using Umbraco.Cms.Core.Services.Navigation;
 using Umbraco.Community.UmbNav.Core.Models;
 using AppBlocks.Documents.PaperReports;
+using System.Text.Json;
 
 namespace UmbracoAppHost.Website;
 
@@ -36,14 +37,32 @@ public static class SiteContent
             .OrderBy(node => node.SortOrder);
 
     /// <summary>
-    /// The nearest authored top navigation menu. A menu an editor emptied is saved as an empty list, which would end
-    /// Umbraco's ancestor fallback, so the walk takes the first menu that has items.
+    /// Select the nearest authored menu before visitor filtering. Empty lists inherit; a menu whose entries are
+    /// hidden from this visitor stays empty and must not expose a different ancestor's menu.
     /// </summary>
     public static IReadOnlyList<UmbNavItem>? NavigationMenu(this IPublishedContent page,
         IDocumentNavigationQueryService navigation, IPublishedContentStatusFilteringService published)
-        => page.AncestorsOrSelf(navigation, published).OrderByDescending(node => node.Level)
-            .Select(node => node.Value<IEnumerable<UmbNavItem>>("topNavigationMenu")?.ToArray())
-            .FirstOrDefault(items => items is { Length: > 0 });
+    {
+        foreach (var node in page.AncestorsOrSelf(navigation, published).OrderByDescending(node => node.Level))
+        {
+            var property = node.GetProperty("topNavigationMenu");
+            if (!HasAuthoredMenu(property?.GetSourceValue())) continue;
+            return node.Value<IEnumerable<UmbNavItem>>("topNavigationMenu")?.ToArray() ?? [];
+        }
+        return null;
+    }
+
+    public static bool HasAuthoredMenu(object? source)
+    {
+        if (string.IsNullOrWhiteSpace(source?.ToString())) return false;
+        try
+        {
+            using var json = JsonDocument.Parse(source.ToString()!);
+            return json.RootElement.ValueKind == JsonValueKind.Array && json.RootElement.GetArrayLength() > 0;
+        }
+        // An invalid local value must not accidentally reveal another owner's menu either.
+        catch (JsonException) { return true; }
+    }
 
     public static IReadOnlyList<SiteNavigationItem> LocalNavigation(this IPublishedContent page,
         IDocumentNavigationQueryService navigation, IPublishedContentStatusFilteringService published)
