@@ -96,8 +96,10 @@ public sealed class DownstreamHostTests
                 Assert.True(contents.GetById(HomeKey)?.Published);
                 Assert.True(contents.GetById(RowsKey)?.Published);
                 Assert.True(contents.GetById(PaperKey)?.Published);
-                Assert.Null(services.GetRequiredService<FormResourceRegistry>().Find("sample.orders"));
-                Assert.DoesNotContain(SampleReport.ReportName, services.GetRequiredService<PublishedReportCatalog>().Reports.Keys);
+                Assert.DoesNotContain("sample.orders", services.GetRequiredService<FormResourceRegistry>().RegisteredResources.Keys);
+                var reports = services.GetRequiredService<PublishedReportCatalog>();
+                await reports.LoadAsync();
+                Assert.DoesNotContain(SampleReport.ReportName, reports.Reports.Keys);
 
                 // Every installed template is allowed on a paper report, and the default stays the default.
                 var types = services.GetRequiredService<IContentTypeService>();
@@ -123,7 +125,7 @@ public sealed class DownstreamHostTests
                 Assert.True(signedIn.IsSuccessStatusCode, $"Login returned {signedIn.StatusCode}: {await signedIn.Content.ReadAsStringAsync()}");
                 var home = await client.GetAsync("/");
                 var homeHtml = await home.Content.ReadAsStringAsync();
-                Assert.True(home.IsSuccessStatusCode, homeHtml);
+                Assert.True(home.IsSuccessStatusCode, $"Home returned {home.StatusCode}: {homeHtml}");
                 Assert.Contains("Downstream home", homeHtml);
                 var paper = await client.GetAsync($"/api/paper-reports/{PaperKey}?format=html");
                 var print = await paper.Content.ReadAsStringAsync();
@@ -190,7 +192,9 @@ public sealed class DownstreamHostTests
 
         // An import that ran before the group existed would drop it from the picker, and every reader could write.
         using var scope = site.CreateScope();
-        var source = scope.ServiceProvider.GetRequiredService<PublishedDataCatalog>().ResolveSource("downstream.rows");
+        var catalog = scope.ServiceProvider.GetRequiredService<PublishedDataCatalog>();
+        await catalog.LoadAsync();
+        var source = catalog.ResolveSource("downstream.rows");
         Assert.NotNull(source);
         Assert.Equal([editors], source.WriteGroups);
     }

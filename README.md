@@ -85,9 +85,9 @@ the working folder after the library's on first boot, for every path the library
 Edit website titles in the backoffice or the saved export; the former `UmbracoAppHost:Title`
 setting no longer changes content.
 `Authentication/ConfiguredAccounts.cs` provisions configured accounts and groups, which are
-outside this export. There is no application schema or content migration runner.
-The sample database is initialized on first use. `src/UmbracoAppHost/Blocks/` holds the rendering,
-access, report, and publishing-validation code used during normal operation.
+outside this export. AppBlocks uses Umbraco’s tracked package migrations for its own definitions;
+the host does not add a separate schema or content migration runner. The sample database is
+initialized on first use. AppBlocks supplies the rendering, access and publishing-validation code.
 
 In **Settings → Structure**, the starter's document types and element types live under
 **Document Types → Application**. Its data types live under **Data Types → Application**,
@@ -97,8 +97,9 @@ the Forms container's own types in **AppBlocks**. Web Site, Web Page,
 their reusable compositions, and the general website grid live under **Website**. These locations come
 from AppBlocks' schemas and the saved export. Sites installed earlier keep the folders they have.
 Existing sites receive the export's definition changes through an explicit uSync
-import. AppBlocks' definitions change only on a fresh site, so recreate a site to take a schema
-change; ordinary restarts preserve manual folder moves.
+import. AppBlocks installs missing definitions through Umbraco’s package importer and applies
+released schema changes through tracked package migrations. Ordinary restarts preserve existing
+definitions except for changes explicitly carried by a pending migration.
 
 Fresh installations start with English (`en`, the default) and French (`fr`, falling back to
 English). Umbraco's installer creates English so its content cache can initialize before uSync runs;
@@ -176,9 +177,11 @@ The application and website grids include the current AppBlocks fields, includin
 [Shuttle](../AppBlocks/docs/shuttle.md), [Color picker](../AppBlocks/docs/color-picker.md) and
 [Anti-spam](../AppBlocks/docs/anti-spam.md). Schedules support markers, colours, descriptions and
 the Jump to menu; see the [Schedule guide](../AppBlocks/docs/schedule.md). Both shells map their
-theme colours to the runtime's tokens. AppBlocks installs schema changes on fresh databases;
-after updating the sibling checkout, rebuild and reset a disposable reference to receive the
-complete schema. Preserve any reference edits before resetting it.
+theme colours to the runtime's tokens. After updating AppBlocks, rebuild: Umbraco applies pending
+package migrations at startup. Form Interface now uses the native Single Block editor. Its schema
+migration updates the package’s data type, but old saved Block List values must be recreated and
+republished. The saved samples use Single Block; reset the disposable reference to import them
+fresh, preserving any edits you want to keep first.
 
 ## uSync exports and the saved export
 
@@ -203,8 +206,10 @@ languages, dictionary and content. It does not hold AppBlocks' definitions: the 
 content blocks, the Interactive Report block, the data source, list and report definition types and their
 data types come from the `Schema/` folders in AppBlocks and its companions. Change those there; a copy
 in this export fails `DefinitionOwnershipTests`, and uSync would refuse to import it anyway. Before any
-uSync import, the first boot's included, `AppBlocksDefinitionImport` installs them, so the content the
-import brings has its types.
+uSync import, the first boot's included, `AppBlocksDefinitionImport` ensures missing definitions
+exist, so imported content has its types even if the package migrations have not run yet. It honors
+`Umbraco:CMS:PackageMigration:RunSchemaAndContentMigrations=false`; when automatic schema
+migrations are disabled, the required definitions must be installed before importing content.
 
 Two definitions overlap on purpose, listed and explained in `AppBlocksDefinitions.HostOwned`:
 `DataTypes/ApplicationApplicationBlocks.config` is AppBlocks' Forms container grid with the blocks a page
@@ -361,12 +366,16 @@ server is enabled for members, the local form and any other configured provider 
 shown immediately. Umbraco's Public Access is the baseline: a page it protects admits the members it
 names and a backoffice user who may edit the page (Umbraco's **Update** permission on it, within
 their start nodes), and nobody else, so any other backoffice user who needs that page signs in there
-with a member account it names. On a page it leaves open, a signed-in backoffice user of any group
+with a member account it names. The editor rule is this host's own, `Authentication/EditorPageAdmission.cs`,
+registered with AppBlocks as an `IProtectedPageAdmission`: the seam AppBlocks asks on a protected
+page once Umbraco has refused and there is no member session. AppBlocks itself admits nobody Umbraco
+refuses, and the page and its block endpoints follow the same answer. On a page it leaves open, a signed-in backoffice user of any group
 needs no member account, and whatever is behind each block decides: the sample's Orders form accepts
 users in **Administrators**. The account menu identifies which account the application is using and
-provides **Sign out**. If both sessions exist, a backoffice user who may edit a protected page can
-view it even when the member is denied. The account menu uses the member identity, and block
-endpoints still evaluate member access first. Sign-out ends both application sessions. See
+provides **Sign out**. If both sessions exist, the member session decides a protected page: a
+member Umbraco refuses is never replaced by the backoffice account, however much that account may
+edit, so the editor signs the member out first. The account menu uses the member identity, and block
+endpoints evaluate member access first too. Sign-out ends both application sessions. See
 [Application forms and report blocks](docs/application-blocks.md).
 
 How the pieces fit:
@@ -427,7 +436,7 @@ set or reset them in **Users** and **Members**. OpenID sign-in does not replace 
 | `EnsureMemberGroups`, `EnsureUserGroups` | Groups created when missing; user groups initially get the Content section. |
 | `EnsureBackOfficeUsers` | Users created when missing (`Email`, `Name`, `UserGroups`). |
 | `EnsureMembers` | Members created when missing (`Email`, `Name`, `MemberGroups`). |
-| `ReportAdministratorUserGroups` | Backoffice groups whose users administer Interactive Reports. |
+| `ReportAdministratorUserGroups` | Backoffice groups whose users administer Interactive Reports, besides Umbraco's `admin` group and AppBlocks' **Interactive Reports Administrator** group (`interactiveReportsAdministrator`), which always do. The defaults name `admin` and this host's own **Interactive Report Administrators** group (`interactiveReportAdministrators`), which `ConfiguredAccounts` creates. |
 | `MemberTypeAlias` | Type for directory-created and roster members. Native OpenID creation uses `MemberAutoLink:DefaultMemberTypeAlias`. |
 | `RetireDeletedUsers`, `RetireDeletedMembers` | Retire used accounts instead of removing them; both default to `true`. |
 
@@ -771,13 +780,18 @@ Authorization bridges Umbraco's two identities:
   (`UMB_UCONTEXT_EXPOSED`), so both audiences reach the package. This runs inside
   Umbraco's middleware block, because middleware appended after `WithEndpoints` never
   sees matched endpoints.
-- A caller is a **report administrator** when they are a backoffice user in one of
-  `ReportAdministratorUserGroups`, or a member whose sign-in key (the Windows SID, from
-  either provider; or, before the first backoffice sign-in, email) matches such a
-  backoffice user.
+- A caller is a **report administrator** when they are an approved, not locked-out
+  backoffice user in Umbraco's `admin` group, in AppBlocks' **Interactive Reports
+  Administrator** group (`interactiveReportsAdministrator`, if the host creates it),
+  or in one of `ReportAdministratorUserGroups` or `AppBlocks:ReportAdministratorGroups`;
+  or a member whose sign-in key (the Windows SID, from either provider; or, before the
+  first backoffice sign-in, email) matches such a backoffice user. `Reports/ReportAccessPolicy.cs`
+  replaces AppBlocks' own policy to add that member link; AppBlocks never relates the two
+  account stores, so a plain AppBlocks site has no such link.
 - Everyone else is an ordinary report user: public reports and their own saved reports.
-- Saved reports are owned by the identity that created them, which is the member id on
-  the website and the user id in the backoffice.
+- Saved reports are owned by the one identity that created them, the same one AppBlocks
+  resolves (`DefaultReportAccessPolicy.OwnerKey`): the member when one is signed in,
+  otherwise the backoffice user.
 
 The uSync baseline supplies the **Report Page** document type and its template registration. The library
 supplies `Views/ReportPage.cshtml`, and Umbraco registers an editable copy in the host's Views

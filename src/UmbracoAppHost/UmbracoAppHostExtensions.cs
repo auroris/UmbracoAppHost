@@ -1,4 +1,5 @@
 using AppBlocks;
+using AppBlocks.Authentication;
 using AppBlocks.Connections;
 using AppBlocks.InteractiveReports;
 using AppBlocks.Documents;
@@ -114,6 +115,8 @@ public static class UmbracoAppHostExtensions
             .AddApplicationPart(typeof(Umbraco.Cms.Web.Common.Controllers.RenderController).Assembly)
             .AddApplicationPart(typeof(UmbracoAppHostExtensions).Assembly);
         builder.Services.AddScoped<ReportAccessPolicy>();
+        // This host's rule for a page Umbraco's Public Access protects: a backoffice user who may edit it is admitted without a member account.
+        builder.Services.AddScoped<IProtectedPageAdmission, EditorPageAdmission>();
         builder.Services.Replace(ServiceDescriptor.Scoped<IReportAccessPolicy>(services => services.GetRequiredService<ReportAccessPolicy>()));
         builder
             .AddSingleSignOn(configuration)

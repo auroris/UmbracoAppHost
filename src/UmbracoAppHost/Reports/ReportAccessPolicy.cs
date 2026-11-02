@@ -7,7 +7,10 @@ using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Models.Membership;
 using Umbraco.Cms.Core.Services;
 using UmbracoAppHost.Authentication;
+using AppBlocks.Authentication;
+using AppBlocks.InteractiveReports;
 using AppBlocks.InteractiveReports.Reports;
+using AppBlocks.InteractiveReports.Setup;
 
 namespace UmbracoAppHost.Reports;
 
@@ -15,12 +18,16 @@ namespace UmbracoAppHost.Reports;
 /// Decides who administers Interactive Reports by bridging Umbraco's two identities.
 /// </summary>
 /// <remarks>
-/// A backoffice user is an administrator when one of their user groups is listed in
-/// <see cref="AccountsSettings.ReportAdministratorUserGroups"/>. A member is an
-/// administrator when the account they signed in with is also linked to such a backoffice
-/// user: the provider key stored with the external login (the Windows SID, whichever
-/// provider supplied it) joins the two.
-/// Everyone else is an ordinary report user.
+/// A backoffice user is an administrator when, approved and not locked out, one of their user groups
+/// is Umbraco's <c>admin</c> group, AppBlocks' <c>interactiveReportsAdministrator</c> group, or listed
+/// in <see cref="AccountsSettings.ReportAdministratorUserGroups"/> or AppBlocks'
+/// <c>AppBlocks:ReportAdministratorGroups</c>: the groups AppBlocks' own policy accepts, plus this
+/// host's configured ones. A member is an administrator when the account they signed in with is
+/// also linked to such a backoffice user: the provider key stored with the external login (the
+/// Windows SID, whichever provider supplied it) joins the two. That link is this host's choice as
+/// a single sign-on host; AppBlocks never relates the two account stores.
+/// Everyone else is an ordinary report user. A saved view belongs to the one identity AppBlocks'
+/// <see cref="DefaultReportAccessPolicy.OwnerKey"/> names: the member when one is signed in, else the backoffice user.
 /// </remarks>
 public sealed class ReportAccessPolicy(
     IUserService userService,
@@ -29,6 +36,7 @@ public sealed class ReportAccessPolicy(
     IExternalLoginWithKeyService externalLogins,
     SsoProviderCatalog providers,
     IOptions<AccountsSettings> accounts,
+    IOptions<AppBlocksOptions> appBlocks,
     IOptions<InteractiveReportOptions> reportOptions,
     ILogger<ReportAccessPolicy> logger,
     AppBlocks.InteractiveReports.DataSources.PublishedReportCatalog? definitions = null) : IReportAccessPolicy
@@ -47,7 +55,7 @@ public sealed class ReportAccessPolicy(
 
         var isAdministrator = await IsAdministratorAsync(user);
         var saved = request.Resource.SavedReport;
-        var caller = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        var caller = DefaultReportAccessPolicy.OwnerKey(user);
         var isOwner = saved is not null && caller is not null
             && string.Equals(saved.Owner, caller, StringComparison.Ordinal);
         var isPublic = saved is { IsGlobal: true } or { IsDefault: true };
@@ -59,7 +67,7 @@ public sealed class ReportAccessPolicy(
                 or InteractiveReportAction.Export
                 or InteractiveReportAction.ListSavedReports
                 or InteractiveReportAction.CreateSavedReport =>
-                isAdministrator || !IsAdministratorsOnly(request.Resource.SourceReportName ?? request.Resource.ReportName),
+                isAdministrator || !await IsAdministratorsOnlyAsync(request.Resource.SourceReportName ?? request.Resource.ReportName),
 
             InteractiveReportAction.ReadSavedReport => isPublic || isOwner || isAdministrator,
 
@@ -71,15 +79,16 @@ public sealed class ReportAccessPolicy(
         logger.LogDebug(
             "Report authorization: {Action} on {Report} for {Identity} ({AuthenticationType}) administrator={Administrator} owner={Owner} public={Public} => {Allowed}; administrator groups [{Groups}]",
             request.Action, request.Resource.ReportName, caller, user.Identity?.AuthenticationType,
-            isAdministrator, isOwner, isPublic, allowed, string.Join(", ", accounts.Value.ReportAdministratorUserGroups));
+            isAdministrator, isOwner, isPublic, allowed, string.Join(", ", AdministratorGroups()));
         return allowed;
     }
 
     /// <summary>Whether the report definition, or the built-in listing, is reserved for administrators.</summary>
-    private bool IsAdministratorsOnly(string reportName)
+    private async Task<bool> IsAdministratorsOnlyAsync(string reportName)
     {
         if (reportName.StartsWith("__", StringComparison.Ordinal))
             return true;
+        if (definitions is not null) await definitions.LoadAsync();
         return (definitions?.Reports ?? reportOptions.Value.Reports).TryGetValue(reportName, out var definition)
             && definition.Authorization?.Policy == ReportAdministratorRequirement.Policy;
     }
@@ -87,20 +96,32 @@ public sealed class ReportAccessPolicy(
     /// <summary>Whether the principal, backoffice user or member, administers reports.</summary>
     public async Task<bool> IsAdministratorAsync(ClaimsPrincipal user)
     {
-        var id = user.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (id is null)
-            return false;
+        // A backoffice user answers for themselves, alone or beside a member.
+        if (ApplicationAccessPolicy.BackOfficeIdentity(user)?.FindFirst(ClaimTypes.NameIdentifier)?.Value is { } userId
+            && IsAdministrator(await FindUserAsync(userId)))
+            return true;
 
-        var backOffice = user.Identity?.AuthenticationType is Constants.Security.BackOfficeAuthenticationType
-            or Constants.Security.BackOfficeExposedAuthenticationType;
-        var umbracoUser = backOffice
-            ? await FindUserAsync(id)
-            : await FindLinkedBackOfficeUserAsync(id);
-        if (umbracoUser is null)
-            return false;
+        // A member is one when the backoffice user their sign-in links to is.
+        var member = ApplicationAccessPolicy.MemberIdentity(user)
+            ?? user.Identities.FirstOrDefault(identity => identity.IsAuthenticated && !IsBackOffice(identity));
+        var memberId = member?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return memberId is not null && IsAdministrator(await FindLinkedBackOfficeUserAsync(memberId));
+    }
 
-        var administratorGroups = accounts.Value.ReportAdministratorUserGroups;
-        return umbracoUser.Groups.Any(group => administratorGroups.Contains(group.Alias, StringComparer.OrdinalIgnoreCase));
+    private static bool IsBackOffice(ClaimsIdentity identity) => identity.AuthenticationType
+        is Constants.Security.BackOfficeAuthenticationType or Constants.Security.BackOfficeExposedAuthenticationType;
+
+    /// <summary>The configured group aliases that administer reports, beyond Umbraco's <c>admin</c> and AppBlocks' own group.</summary>
+    private IEnumerable<string> AdministratorGroups()
+        => accounts.Value.ReportAdministratorUserGroups.Concat(appBlocks.Value.ReportAdministratorGroups);
+
+    private bool IsAdministrator(IUser? user)
+    {
+        if (user is not { IsApproved: true, IsLockedOut: false }) return false;
+        var configured = AdministratorGroups().ToList();
+        return user.Groups.Any(group => group.Alias.Equals(Constants.Security.AdminGroupAlias, StringComparison.OrdinalIgnoreCase)
+            || group.Alias.Equals(ReportAdministratorGroup.Alias, StringComparison.OrdinalIgnoreCase)
+            || configured.Contains(group.Alias, StringComparer.OrdinalIgnoreCase));
     }
 
     private async Task<IUser?> FindUserAsync(string id)

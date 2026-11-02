@@ -236,11 +236,16 @@ public sealed class DefinitionOwnershipTests
         Assert.True(problems.Count == 0, string.Join("\n", problems));
     }
 
-    private static bool IsBlockEditor(XElement dataType) => Text(dataType.Element("Info")!, "EditorAlias") is "Umbraco.BlockGrid" or "Umbraco.BlockList";
+    private static bool IsBlockEditor(XElement dataType) => Text(dataType.Element("Info")!, "EditorAlias") is "Umbraco.BlockGrid" or "Umbraco.BlockList" or "Umbraco.SingleBlock";
 
     /// <summary>Each block is a type its editor offers, and sets only properties that type has, however deep it is nested.</summary>
     private static void CheckBlocks(Installed installed, string where, XElement dataType, JsonNode value, List<string> problems)
     {
+        var editor = Text(dataType.Element("Info")!, "EditorAlias");
+        if (value["layout"]?[editor] is not JsonArray layout)
+            problems.Add($"{where} needs a {editor} layout to match {Alias(dataType)}.");
+        else if (editor == "Umbraco.SingleBlock" && layout.Count > 1)
+            problems.Add($"{where} cannot contain more than one Single Block.");
         var offered = (JsonNode.Parse(Text(dataType, "Config"))?["blocks"]?.AsArray() ?? []).Select(block => block!["contentElementTypeKey"]!.GetValue<string>()).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var section in new[] { "contentData", "settingsData" })
         foreach (var block in value[section]?.AsArray() ?? [])

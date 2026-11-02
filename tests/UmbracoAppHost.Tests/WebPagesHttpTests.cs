@@ -297,12 +297,13 @@ public sealed class WebPagesHttpTests
         Assert.Contains("access-denied-marker", deniedReference.Html);
         Assert.DoesNotContain("private-reference-marker", deniedReference.Html);
         AssertNoStore(deniedReference.Response);
-        // A backoffice user who can edit the page may view it even when a concurrent member session is denied.
+        // With a member session present, Umbraco's own decision for that member stands: a refused member is never
+        // replaced by a concurrent backoffice session, so the host's editor rule is not even asked.
         using var both = Client(address, "en.website.test", useCookies: false);
         both.DefaultRequestHeaders.Add("Cookie", Cookies(memberSignIn) + "; " + Cookies(signIn));
         var bothReference = await Page(both, "/private-reference/");
-        Assert.Contains("private-reference-marker", bothReference.Html);
-        Assert.DoesNotContain("access-denied-marker", bothReference.Html);
+        Assert.Contains("access-denied-marker", bothReference.Html);
+        Assert.DoesNotContain("private-reference-marker", bothReference.Html);
         AssertNoStore(bothReference.Response);
 
         // An ancestor's edit refreshes a page's cache validators, while its visible date reports the page's own change.
@@ -367,7 +368,7 @@ public sealed class WebPagesHttpTests
         var html = await response.Content.ReadAsStringAsync();
         var name = Regex.Replace(client.DefaultRequestHeaders.Host + path, "[^a-zA-Z0-9.-]", "-");
         await System.IO.File.WriteAllTextAsync(Path.Combine(responses, $"{++responseNumber:D2}-{name}.html"), html);
-        Assert.True(response.IsSuccessStatusCode, html);
+        Assert.True(response.IsSuccessStatusCode, $"GET {path} returned {response.StatusCode}: {html}");
         Assert.DoesNotContain("Could not render", html);
         return (response, html);
     }

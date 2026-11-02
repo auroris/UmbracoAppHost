@@ -38,9 +38,10 @@ public static class UmbracoTestSupport
         var runtime = services.GetRequiredService<IRuntimeState>();
         var readiness = services.GetRequiredService<IContentRoutingReadiness>();
         var waited = Stopwatch.StartNew();
-        while ((runtime.Level != RuntimeLevel.Run || !readiness.IsReady) && waited.Elapsed < limit) await Task.Delay(100);
+        while ((runtime.Level != RuntimeLevel.Run || !readiness.IsReady)
+            && runtime.Level != RuntimeLevel.BootFailed && waited.Elapsed < limit) await Task.Delay(100);
         if (runtime.Level != RuntimeLevel.Run)
-            throw new TestSiteException($"Umbraco is at runtime level {runtime.Level}, not Run, after {limit}.", runtime.BootFailedException);
+            throw new TestSiteException($"Umbraco is at runtime level {runtime.Level}, not Run, after {waited.Elapsed}.", runtime.BootFailedException);
         if (!readiness.IsReady) throw new TestSiteException($"Umbraco did not finish initializing its content caches within {limit}.");
     }
 

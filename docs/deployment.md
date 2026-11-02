@@ -173,9 +173,9 @@ ships, are left in place, with one exception: the paths in `deployment/appblocks
 the definitions AppBlocks and its companions install themselves, are removed and listed. They are
 in that folder because earlier exports shipped them and because uSync's export on save writes them.
 Removing them is housekeeping: a uSync import refuses those keys in any case, so an old copy cannot
-put an old definition back. The site's database keeps its definitions: AppBlocks installs only what
-is missing and does not change existing definitions, and it has no schema migrations, so a site takes
-a change to one of them by being recreated. Nothing is imported automatically: start the site, open
+put an old definition back. AppBlocks applies pending tracked package migrations at startup,
+including its initial schema installation. Existing definitions otherwise stay as the site configured them.
+The host’s refreshed uSync definitions are not imported automatically: start the site, open
 **Settings → uSync** in its backoffice, run **Report** to see what would change, then **Import**.
 `Content/` and `Domains/` are not copied; pages belong to the site after creation.
 
@@ -200,13 +200,16 @@ backup when rollback is necessary. Take a backup before updating a production si
 
 ## Schema evolution
 
-New databases receive the host's definitions from the saved uSync export during uSync's built-in
-first boot, and AppBlocks' just before it from the schemas in AppBlocks and its companions. Existing
-sites receive changes to the export's definitions through `update-site.ps1` and a backoffice import.
-AppBlocks has no migrations: at the next start it installs a definition that is missing and leaves
-existing ones alone, so a site takes a changed AppBlocks definition by being recreated.
-The host does not run application schema or content migrations.
-Changes requiring a data conversion need a separate, explicit migration appropriate to that site.
+New databases receive the host’s definitions from the saved uSync export during uSync’s built-in
+first boot. AppBlocks installs its own definitions through Umbraco’s package importer and tracked
+package migrations; the host also ensures missing definitions exist before each uSync import.
+Existing sites receive changes to the host’s definitions through `update-site.ps1` and a backoffice
+import, while AppBlocks applies its pending package migrations at startup. Automatic AppBlocks
+schema work honors `Umbraco:CMS:PackageMigration:RunSchemaAndContentMigrations=false`.
+The host adds no separate schema or content migration runner. Form Interface’s switch to Single
+Block updates its data type but does not convert old saved values or historical versions. Recreate
+and republish affected interfaces, or reset a disposable reference to import the updated samples.
+Other content conversions need an explicit migration appropriate to the site.
 External Oracle/SQLite business databases remain separate from uSync.
 uSync first-boot imports are enabled; imports on ordinary restarts remain disabled so an
 old export cannot overwrite editor changes. The library includes the saved export in its assembly

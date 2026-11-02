@@ -63,10 +63,13 @@ Use Umbraco **Public Access** on the nested application Web Site to choose the a
 groups, login page and access-denied page. Its descendants inherit that protection; the public
 overview remains accessible. Public Access admits, besides the members it names, a backoffice user
 who may edit the page: Umbraco's **Update** permission on it, through their user groups and within
-their start nodes. Any other backoffice user gets its login page, and the form, report and
+their start nodes. That is this host's own rule, `EditorPageAdmission`, registered with AppBlocks
+as an `IProtectedPageAdmission`; AppBlocks by itself admits nobody Umbraco refuses. Any other
+backoffice user gets its login page, and the form, report and
 paper-report endpoints answer the same way, so such a user signs in there with a member account
-the rule names. When both sessions exist, a backoffice user who may edit the page can view it
-even when the member is denied. Block endpoints evaluate member access first, so viewing the
+the rule names. When both sessions exist, the member session decides: a member Umbraco refuses
+is never replaced by the backoffice account, however much it may edit, so the editor signs the
+member out first. Block endpoints evaluate member access first as well, so viewing the
 page does not grant access to every block's data or operations.
 The shell choice does not grant or remove access. Public Access rules must be configured for
 each installation: the installed uSync version does not export them. Keep the login and
@@ -100,7 +103,7 @@ with the page's CSS and JavaScript fields.
    make changes in the native report UI, and choose **Use this view**. Ordinary editors can
    retain, clear, or supply a report-state document. Publication validates its structure;
    the report engine validates its expressions and columns when it executes.
-4. For a form, add its one **Form Interface**, select a registered C# form class, and choose its
+4. For a form, add its **Form Interface** using Umbraco’s native Single Block editor, select a registered C# form class, and choose its
    record-key query parameter and return page. Add field blocks to the fields area. Field choices
    come from the selected class. Arrange them with the layout blocks and fieldsets described under
    [Layouts](#layouts), with an optional Form actions block for button labels, and add rich
@@ -111,8 +114,8 @@ with the page's CSS and JavaScript fields.
    `orders-form?id=4`.
 6. Publish, then use Umbraco **Public Access** on the page or its ancestor to select the
    member groups that can enter it. A protected page also admits a backoffice user who may edit
-   it, including when a concurrent member session is denied. Form, report and paper-report
-   endpoints evaluate member access first when both sessions exist, then apply their own data
+   it, unless a member session is present, in which case the member's own access decides. Form,
+   report and paper-report endpoints answer the same way, then apply their own data
    permissions. On an open page, a signed-in backoffice user reaches the blocks without a
    member account, and whatever is behind each block decides.
 
@@ -128,7 +131,7 @@ groups, including Interactive Report Administrators, do not get it.
 
 The account menu at the top right identifies the active account as **Member account** or
 **Backoffice account**, and includes **Sign out**. When both sessions exist, the menu shows the
-member account; the backoffice editor's permission can still admit the page. Sign out ends both application sessions so
+member account, and its access to a protected page decides, not the backoffice editor's permission. Sign out ends both application sessions so
 the next request cannot silently switch to the backoffice account.
 
 The available fields are text box, text area, number, date, time, date and time, checkbox,

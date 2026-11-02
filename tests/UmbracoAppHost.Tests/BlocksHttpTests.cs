@@ -148,7 +148,7 @@ public sealed class BlocksHttpTests
                 new(ClaimTypes.NameIdentifier, editor.Key.ToString()), new(ClaimTypes.Role, Constants.Security.AdminGroupAlias)
             ], Constants.Security.BackOfficeExposedAuthenticationType));
             var context = new FormExecutionContext(principal, form.Key, ApplicationStarter.FormKey, "1", Guid.NewGuid().ToString());
-            var resource = services.GetRequiredService<FormResourceRegistry>().Find("sample.orders")!;
+            var resource = services.GetRequiredService<FormResourceRegistry>().RegisteredResources["sample.orders"];
             var input = JsonSerializer.SerializeToElement(new { customer = "Test", region = "NORTH", status = "NEW", amount = "1.00", orderDate = "2026-09-16" });
             Assert.Equal(403, (await resource.InitializeAsync(context, default)).Status);
             Assert.Equal(403, (await resource.LoadAsync("4", context, default)).Status);

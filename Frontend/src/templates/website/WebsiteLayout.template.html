@@ -23,6 +23,9 @@
 
     PageAssets.RegisterPage(Model, NavigationQueryService, PublishedStatusFilteringService, Context);
 
+    // The account menu changes with the session even on pages without interactive blocks.
+    if ((await Visitor.ResolveAsync()).IsSignedIn) Context.KeepOutOfCaches();
+
     // The latest update of the page and everything that registered its own date. A client that already
     // holds that version gets a 304 without the body being rendered.
     var pageUpdateDate = Context.GetPageUpdateDate(Model.UpdateDate);

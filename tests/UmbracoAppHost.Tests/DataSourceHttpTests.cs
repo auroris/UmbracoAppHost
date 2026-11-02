@@ -49,6 +49,8 @@ public sealed class DataSourceHttpTests
         {
             var catalog = definitionsScope.ServiceProvider.GetRequiredService<PublishedReportCatalog>();
             var lists = definitionsScope.ServiceProvider.GetRequiredService<PublishedDataCatalog>();
+            await catalog.LoadAsync();
+            await lists.LoadAsync();
             Assert.Contains("orders", catalog.ReportNodes.Keys);
             Assert.Contains("umbraco-recent-pages", catalog.ReportNodes.Keys);
             Assert.Equal(2, lists.Lists.Count);
@@ -60,6 +62,8 @@ public sealed class DataSourceHttpTests
         {
             var catalog = nextScope.ServiceProvider.GetRequiredService<PublishedReportCatalog>();
             var lists = nextScope.ServiceProvider.GetRequiredService<PublishedDataCatalog>();
+            await catalog.LoadAsync();
+            await lists.LoadAsync();
             Assert.Same(ordersReport, catalog.ReportNodes["orders"]);
             Assert.Same(regionList, lists.Lists["order-region"]);
         }
@@ -72,7 +76,7 @@ public sealed class DataSourceHttpTests
         Assert.Equal("NORTH", initial.GetProperty("region").GetString());
         Assert.Equal("NEW", initial.GetProperty("status").GetString());
         Assert.Equal(DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd"), initial.GetProperty("orderDate").GetString());
-        Assert.EndsWith(services.GetRequiredService<FormResourceRegistry>().Find("sample.orders")!.ContractVersion, start.DefinitionVersion);
+        Assert.EndsWith(services.GetRequiredService<FormResourceRegistry>().RegisteredResources["sample.orders"].ContractVersion, start.DefinitionVersion);
         var created = Ok(await orders.CreateAsync(new {
             customer = "Member order", region = "WEST", status = "NEW", amount = "42.50", orderDate = "2026-10-23", notes = "Created through the data source" }));
         // A browser can forge an option; membership in the current list is checked again on the server.

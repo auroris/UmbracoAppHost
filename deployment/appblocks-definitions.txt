@@ -38,6 +38,7 @@ DataTypes/AppBlocksTable.config
 DataTypes/ApplicationAntiSpamService.config
 DataTypes/ApplicationAntiSpamSize.config
 DataTypes/ApplicationAntiSpamTheme.config
+DataTypes/ApplicationBackingClass.config
 DataTypes/ApplicationBoolean.config
 DataTypes/ApplicationColumnSplit.config
 DataTypes/ApplicationCSS.config

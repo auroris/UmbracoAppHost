@@ -31,9 +31,9 @@ public sealed class AppBlocksDefinitions(IEnumerable<AppBlocksSchema> schemas)
 }
 
 /// <summary>
-/// AppBlocks installs its definitions without knowing about uSync, on the application-started notification. uSync's
-/// first boot imports earlier than that, from the application-starting notification, so left alone the import meets
-/// content whose types do not exist yet. Before any import this installs them; during one it refuses a stale copy of a
+/// AppBlocks installs its definitions through Umbraco's tracked package migrations. A uSync import may run before those
+/// migrations, so before any import this ensures missing definitions exist, respecting Umbraco's schema migration setting.
+/// During an import it refuses a stale copy of a
 /// definition that a working folder still holds, which would otherwise replace AppBlocks' with whatever that file says.
 /// </summary>
 public sealed class AppBlocksDefinitionImport(SchemaInstaller installer, AppBlocksDefinitions definitions, ILogger<AppBlocksDefinitionImport> logger)

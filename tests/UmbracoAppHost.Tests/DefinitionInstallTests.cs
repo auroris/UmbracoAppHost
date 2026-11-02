@@ -6,6 +6,7 @@ using AppBlocks.Setup;
 using Microsoft.Extensions.DependencyInjection;
 using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Events;
+using Umbraco.Cms.Core.Exceptions;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Services;
 using uSync.BackOffice;
@@ -96,30 +97,31 @@ public sealed class DefinitionInstallTests
         Assert.Contains("\"paperReport\"", contents.GetById(OrdersInteractive)!.GetValue<string>("applicationBlocks"));
     }
 
-    /// <summary>uSync logs the failure and carries on with the site, without importing content over types that are not there.</summary>
+    /// <summary>A failed native package migration fails the boot before uSync can import content.</summary>
     [Fact]
     public async Task A_failed_installation_stops_the_first_boot_import()
     {
         var probe = new ProbeResult();
-        await using var site = await TestSite.StartAsync(new TestSiteOptions
+        var exception = await Assert.ThrowsAsync<TestSiteException>(async () =>
         {
-            Application = typeof(Program).Assembly,
-            UseInstallSnapshot = false,
-            // The started notification fails the same way, and its later handlers include the administrator's rename.
-            WaitForAdministratorRename = false,
-            ConfigureBuilder = builder =>
+            await using var site = await TestSite.StartAsync(new TestSiteOptions
             {
-                builder.Services.AddSingleton(probe);
-                builder.Services.AddTransient<INotificationAsyncHandler<uSyncImportingItemNotification>, ImportProbe>();
-                // This assembly embeds no schema, so reading its definitions fails the installation.
-                builder.Services.AddSingleton(new AppBlocksSchema(typeof(DefinitionInstallTests).Assembly));
-            },
+                Application = typeof(Program).Assembly,
+                UseInstallSnapshot = false,
+                ConfigureBuilder = builder =>
+                {
+                    builder.Services.AddSingleton(probe);
+                    builder.Services.AddTransient<INotificationAsyncHandler<uSyncImportingItemNotification>, ImportProbe>();
+                    // This assembly embeds no schema, so reading its definitions fails the migration.
+                    builder.Services.AddSingleton(new AppBlocksSchema(typeof(DefinitionInstallTests).Assembly));
+                },
+            });
         });
+        Assert.Contains(nameof(RuntimeLevel.BootFailed), exception.Message);
+        var cause = Assert.IsType<BootFailedException>(exception.InnerException);
+        Assert.Contains("embedded file manifest", cause.Message);
+        Assert.Contains(typeof(DefinitionInstallTests).Assembly.GetName().Name!, cause.Message);
         Assert.False(probe.Seen, "The first boot imported although the definitions failed to install.");
-        using var scope = site.CreateScope();
-        Assert.Null(scope.ServiceProvider.GetRequiredService<IContentService>().GetById(OrdersInteractive));
-        // uSync counts it as done, so the failure is the site's to repair: a reset, as for any failed first boot.
-        Assert.NotNull(scope.ServiceProvider.GetRequiredService<IKeyValueService>().GetValue(Constants.Conventions.Migrations.KeyValuePrefix + "uSync_FirstBoot"));
     }
 
     /// <summary>
