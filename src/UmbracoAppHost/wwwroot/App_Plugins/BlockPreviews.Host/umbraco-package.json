@@ -1,0 +1,33 @@
+{
+  "name": "UmbracoAppHost previews",
+  "version": "1.0.0",
+  "extensions": [
+    {
+      "type": "blockEditorCustomView",
+      "alias": "UmbracoAppHost.Preview.umbBlockGridDemoHeadlineBlock",
+      "name": "umbBlockGridDemoHeadlineBlock preview",
+      "element": "/App_Plugins/BlockPreviews.Host/block-preview.js",
+      "forContentTypeAlias": "umbBlockGridDemoHeadlineBlock"
+    },
+    {
+      "type": "blockEditorCustomView",
+      "alias": "UmbracoAppHost.Preview.umbBlockGridDemoRichTextBlock",
+      "name": "umbBlockGridDemoRichTextBlock preview",
+      "element": "/App_Plugins/BlockPreviews.Host/block-preview.js",
+      "forContentTypeAlias": "umbBlockGridDemoRichTextBlock"
+    },
+    {
+      "type": "blockEditorCustomView",
+      "alias": "UmbracoAppHost.Preview.umbBlockGridDemoImageBlock",
+      "name": "umbBlockGridDemoImageBlock preview",
+      "element": "/App_Plugins/BlockPreviews.Host/block-preview.js",
+      "forContentTypeAlias": "umbBlockGridDemoImageBlock"
+    },
+    {
+      "name": "Host preview styles",
+      "js": "/App_Plugins/BlockPreviews.Host/entrypoint.js",
+      "type": "appEntryPoint",
+      "alias": "UmbracoAppHost.PreviewStyles"
+    }
+  ]
+}

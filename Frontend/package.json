@@ -16,6 +16,7 @@
     "check": "tsc --noEmit -p jsconfig.json",
     "test": "node --test test/application-blocks.mjs test/templates.mjs test/website.mjs",
     "test:blocks": "node --test test/application-blocks.mjs",
+    "test:previews": "node --test test/block-previews.mjs test/block-preview-components.mjs",
     "capture": "node capture.mjs",
     "templates": "node templates.mjs",
     "templates:emit": "node templates.mjs --emit",
