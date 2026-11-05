@@ -68,9 +68,12 @@ test('escape closes the submenu holding the focus and returns it to the button',
   assert.equal(window.document.activeElement, button);
 });
 
-test('the stylesheet styles the shell and every block family, with no borrowed framework', () => {
-  for (const hook of ['.site-hero', '.site-menu', '.ah-layout>.ah-area', '.ah-region__title', '.ah-rich-text', '.app-form', '.app-tabular-table', '.app-schedule-scroll', '.app-report', '.app-signin', '--umb-block-grid--area-grid-columns']) {
+test('the stylesheets style the shell and every block family, with no borrowed framework', () => {
+  for (const hook of ['.site-hero', '.site-menu', '.ah-layout>.ah-area', '.ah-region__title', '.ah-rich-text', '.app-form', '.app-tabular-table', '.app-schedule-scroll', '.app-report', '--umb-block-grid--area-grid-columns']) {
     assert.ok(stylesheet.includes(hook), `Missing ${hook}`);
   }
   assert.doesNotMatch(stylesheet, /Bootstrap|\.col-md-/);
+  const signIn = readFileSync(resolve(root, 'dist/css/signin.css'), 'utf8');
+  assert.ok(signIn.includes('.app-signin'));
+  assert.doesNotMatch(signIn, /Bootstrap|\.col-md-/);
 });

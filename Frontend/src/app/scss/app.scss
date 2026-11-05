@@ -393,61 +393,7 @@ a {
   border-color: var(--app-accent);
 }
 
-// Sign-in -----------------------------------------------------------------------------------
-
-.app-signin {
-  width: 100%;
-  max-width: 26rem;
-
-  form {
-    display: inline-block;
-    margin: 0 0.5rem 0.5rem 0;
-  }
-}
-
-.app-signin-note {
-  margin: 0.75rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--app-muted);
-
-  a {
-    display: inline;
-    color: var(--app-accent);
-    text-decoration: underline;
-  }
-}
-
-.app-login-form,
-.app-signin .app-login-form {
-  display: grid;
-  gap: 0.5rem;
-  width: 100%;
-  margin: 0 0 1rem;
-
-  input:not([type="hidden"]) {
-    display: block;
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius);
-    background: var(--app-surface);
-    color: var(--app-text);
-    font: inherit;
-  }
-
-  .app-button {
-    justify-self: start;
-    margin-top: 0.5rem;
-  }
-}
-
-.app-login-errors {
-  color: #8c1d18;
-
-  &.validation-summary-valid {
-    display: none;
-  }
-}
+// Shared action buttons ---------------------------------------------------------------------
 
 .app-button {
   padding: 0.5rem 1rem;
@@ -457,15 +403,6 @@ a {
   color: var(--app-accent-text);
   font: inherit;
   cursor: pointer;
-}
-
-.app-denied {
-  margin: 0 0 1rem;
-  padding: 0.6rem 0.8rem;
-  border: 1px solid #f2c4bd;
-  border-radius: var(--app-radius);
-  background: #fdecea;
-  color: #8c1d18;
 }
 
 // Footer ------------------------------------------------------------------------------------

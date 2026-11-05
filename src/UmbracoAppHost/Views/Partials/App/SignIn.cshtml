@@ -18,55 +18,93 @@
     }
     var loginModel = new LoginModel();
 }
-@if (Visitor.Denied is not null)
-{
-    <p class="app-denied" role="alert">Sign-in was refused: @Visitor.Denied</p>
-}
-@foreach (var error in providerErrors)
-{
-    <p class="app-denied" role="alert">@error</p>
-}
-@if (requiresTwoFactor)
-{
-    foreach (var provider in twoFactorProviders!)
+<link rel="stylesheet" href="~/dist/css/signin.css" asp-append-version="true" nonce="@AppBlocks.Blocks.AppPageAssets.Nonce(Context)" />
+<script src="~/dist/scripts/signin.js" asp-append-version="true" defer nonce="@AppBlocks.Blocks.AppPageAssets.Nonce(Context)"></script>
+<div class="app-signin-content">
+    <header class="app-signin-heading">
+        <span class="app-signin-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="10" width="14" height="11" rx="2" />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+            </svg>
+        </span>
+        <h2>@(requiresTwoFactor ? "Verify your sign-in" : "Sign in")</h2>
+        <p>@(requiresTwoFactor ? "Enter your security code to finish signing in." : "Use your application account to continue.")</p>
+    </header>
+    @if (Visitor.Denied is not null || providerErrors.Length > 0)
     {
-        using (Html.BeginUmbracoForm<UmbTwoFactorLoginController>("Verify2FACode", new { returnUrl }, new { @class = "app-login-form", action = formUrl }))
+        <div class="app-signin-notice" role="status">
+            <strong>Automatic sign-in wasn’t completed</strong>
+            <p>Sign in below, or try your organisation’s sign-in again.</p>
+            <details class="app-signin-details">
+                <summary>Sign-in details</summary>
+                @if (Visitor.Denied is not null)
+                {
+                    <p>@Visitor.Denied</p>
+                }
+                @foreach (var error in providerErrors)
+                {
+                    <p>@error</p>
+                }
+            </details>
+        </div>
+    }
+    @if (requiresTwoFactor)
+    {
+        foreach (var provider in twoFactorProviders!)
+        {
+            using (Html.BeginUmbracoForm<UmbTwoFactorLoginController>("Verify2FACode", new { returnUrl }, new { @class = "app-login-form", action = formUrl }))
+            {
+                @Html.ValidationSummary(false, "", new { @class = "app-login-errors", role = "alert" })
+                <input type="hidden" name="provider" value="@provider" />
+                <div class="app-login-field">
+                    <label>Security code for @provider
+                        <input name="code" autocomplete="one-time-code" spellcheck="false" required />
+                    </label>
+                </div>
+                <button type="submit" class="app-button app-signin-submit">Verify and sign in</button>
+            }
+        }
+    }
+    else
+    {
+        using (Html.BeginUmbracoForm<UmbLoginController>("HandleLogin", new { RedirectUrl = returnUrl }, new { @class = "app-login-form", action = formUrl }))
         {
             @Html.ValidationSummary(false, "", new { @class = "app-login-errors", role = "alert" })
-            <input type="hidden" name="provider" value="@provider" />
-            <label>Security code for @provider
-                <input name="code" autocomplete="one-time-code" required />
-            </label>
-            <button type="submit" class="app-button">Verify</button>
+            <div class="app-login-field">
+                <label asp-for="@loginModel.Username">Username</label>
+                <input asp-for="@loginModel.Username" autocomplete="username" autocapitalize="none" spellcheck="false" required />
+            </div>
+            <div class="app-login-field">
+                <label asp-for="@loginModel.Password">Password</label>
+                <div class="app-password-field">
+                    <input asp-for="@loginModel.Password" autocomplete="current-password" required />
+                    <button type="button" class="app-password-toggle" aria-label="Show password" hidden>Show</button>
+                </div>
+            </div>
+            <button type="submit" class="app-button app-signin-submit">Sign in</button>
         }
-    }
-}
-else
-{
-    using (Html.BeginUmbracoForm<UmbLoginController>("HandleLogin", new { RedirectUrl = returnUrl }, new { @class = "app-login-form", action = formUrl }))
-    {
-        @Html.ValidationSummary(false, "", new { @class = "app-login-errors", role = "alert" })
-        <label asp-for="@loginModel.Username">Username</label>
-        <input asp-for="@loginModel.Username" autocomplete="username" required />
-        <label asp-for="@loginModel.Password">Password</label>
-        <input asp-for="@loginModel.Password" autocomplete="current-password" required />
-        <button type="submit" class="app-button">Sign in</button>
-    }
-    foreach (var provider in Visitor.Providers)
-    {
-        using (Html.BeginUmbracoForm<MemberLoginController>(nameof(MemberLoginController.Retry), new { returnUrl }, new { action = formUrl }))
+        if (Visitor.Providers.Count > 0)
         {
-            <input type="hidden" name="provider" value="@provider.MemberScheme">
-            <input type="hidden" name="returnUrl" value="@returnUrl">
-            <button type="submit" class="app-button">Sign in with @provider.DisplayName</button>
+            <div class="app-signin-divider"><span>or</span></div>
+            <div class="app-signin-providers">
+                @foreach (var provider in Visitor.Providers)
+                {
+                    using (Html.BeginUmbracoForm<MemberLoginController>(nameof(MemberLoginController.Retry), new { returnUrl }, new { action = formUrl }))
+                    {
+                        <input type="hidden" name="provider" value="@provider.MemberScheme">
+                        <input type="hidden" name="returnUrl" value="@returnUrl">
+                        <button type="submit" class="app-button app-signin-provider">Sign in with @provider.DisplayName</button>
+                    }
+                }
+            </div>
         }
     }
-    if (Visitor.Providers.Count > 0)
+    @if (ViewData["MemberAccessOnly"] is not true)
     {
-        <p><a href="@SsoLoginUrls.LocalMemberUrl(Context, returnUrl)">Use username and password</a></p>
+        <details class="app-signin-admin">
+            <summary>Administrator access</summary>
+            <p class="app-signin-note">Members of the backoffice Administrators group can also use the <a href="@(pathBase)/umbraco">backoffice sign-in</a> to access this application.</p>
+        </details>
     }
-}
-@if (ViewData["MemberAccessOnly"] is not true)
-{
-    <p class="app-signin-note">Members of the backoffice Administrators group can also use the <a href="@(pathBase)/umbraco">backoffice sign-in</a> to access this application.</p>
-}
+</div>

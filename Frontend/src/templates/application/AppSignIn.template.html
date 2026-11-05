@@ -21,8 +21,7 @@
     {{ partial "App/Header" }}
     <main class="app-main app-main-centered" id="main">
         <section class="app-card app-signin">
-            <h1 class="app-card-title">{{ razor 'application.NavigationTitle()' }}</h1>
-            <p>{{ dict "app-signin-prompt" default="Sign in to use this application." }}</p>
+            <h1 class="app-signin-context">{{ razor 'application.NavigationTitle()' }}</h1>
             {{ partial "App/SignIn" }}
         </section>
     </main>

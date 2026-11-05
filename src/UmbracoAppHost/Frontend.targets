@@ -13,7 +13,7 @@
   <Target Name="BuildFrontend" BeforeTargets="PrepareForBuild" DependsOnTargets="RestoreFrontend"
           Condition="'$(DesignTimeBuild)' != 'true'"
           Inputs="@(FrontendSource)"
-          Outputs="$(FrontendRoot)\dist\.build-stamp;$(FrontendRoot)\dist\scripts\site.js;$(FrontendRoot)\dist\css\app.css;$(MSBuildProjectDirectory)\Views\WebsiteLayout.cshtml;$(MSBuildProjectDirectory)\Views\AppMaster.cshtml;$(MSBuildProjectDirectory)\Views\AppHome.cshtml;$(MSBuildProjectDirectory)\Views\AppPage.cshtml;$(MSBuildProjectDirectory)\Views\AppSignIn.cshtml">
+          Outputs="$(FrontendRoot)\dist\.build-stamp;$(FrontendRoot)\dist\scripts\site.js;$(FrontendRoot)\dist\css\app.css;$(FrontendRoot)\dist\css\signin.css;$(FrontendRoot)\dist\scripts\signin.js;$(MSBuildProjectDirectory)\Views\WebsiteLayout.cshtml;$(MSBuildProjectDirectory)\Views\AppMaster.cshtml;$(MSBuildProjectDirectory)\Views\AppHome.cshtml;$(MSBuildProjectDirectory)\Views\AppPage.cshtml;$(MSBuildProjectDirectory)\Views\AppSignIn.cshtml">
     <Exec WorkingDirectory="$(FrontendRoot)" Command="npm run build" />
     <Exec WorkingDirectory="$(FrontendRoot)" Command="npm run templates:emit" />
     <Touch Files="$(FrontendRoot)\dist\.build-stamp" AlwaysCreate="true" />

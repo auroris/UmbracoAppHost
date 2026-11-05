@@ -119,6 +119,9 @@ const options = {
     // The application family: one stylesheet and one script, no jQuery.
     'scripts/app': 'src/app/js/app.js',
     'css/app': 'src/app/css/app.css',
+    // Sign-in is shared by the built-in shells and downstream themes.
+    'css/signin': 'src/scss/components/signin.scss',
+    'scripts/signin': 'src/signin.js',
   },
   outdir: 'dist',
   bundle: true,
