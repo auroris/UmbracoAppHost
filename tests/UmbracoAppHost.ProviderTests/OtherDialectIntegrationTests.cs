@@ -65,7 +65,7 @@ public sealed class OtherDialectIntegrationTests
             var definition = new DataSourceDefinition {
                 Access = DataSourceAccess.NotPublic,
                 Key = Guid.NewGuid(), Name = "Tasks", Alias = "tasks", Connection = "TestDb", Source = sourceName,
-                KeyColumns = ["ID"], AllowInsert = true, AllowUpdate = true, AllowDelete = true, VersionColumn = "VERSION",
+                KeyColumns = ["ID"], AllowInsert = true, AllowUpdate = true, AllowDelete = true, Concurrency = DataSourceConcurrency.Checksum,
                 KeySequences = kind == DatabaseDialect.Oracle11g ? new Dictionary<string, string> { ["ID"] = sequence } : new Dictionary<string, string>(),
                 RowRestriction = "\"OWNER_NAME\" = :USER_NAME",
                 Mapping = [new("done", "DONE", Kind: FieldKinds.Checkbox)],
@@ -84,7 +84,7 @@ public sealed class OtherDialectIntegrationTests
             var literal = oracle ? "q'[It's :NOT_A_BIND;]'" : "$text$It's :NOT_A_BIND;$text$";
             var query = new SqlDataSource(definition with { Source = $"SELECT t.*, {literal} AS \"LITERAL\" FROM {sourceName} t",
                 AllowInsert = false, AllowUpdate = false, AllowDelete = false, KeySequences = new Dictionary<string, string>(),
-                VersionColumn = null, AuditColumns = new(), InsertDefaults = [] }, runtime, new TestUsers(), []);
+                AuditColumns = new(), InsertDefaults = [] }, runtime, new TestUsers(), []);
             Assert.Null(query.Problem);
             Assert.Equal("It's :NOT_A_BIND;", (await query.LoadAsync(created.Record.Key!, context, default)).Record!.Values["literal"]);
             Assert.Equal(404, (await source.LoadAsync(created.Record.Key!, Context("someone-else"), default)).Status);
@@ -93,12 +93,11 @@ public sealed class OtherDialectIntegrationTests
             Assert.Equal("owner", updated.Record!.Values["updatedBy"]);
             Assert.NotEqual(created.Record.Version, updated.Record.Version);
             Assert.Equal(409, (await source.UpdateAsync(created.Record.Key!, Json(new { title = "Stale" }), created.Record.Version!, context, default)).Status);
-            var checksum = new SqlDataSource(definition with { VersionColumn = null }, runtime, new TestUsers(), []);
-            var before = await checksum.LoadAsync(created.Record.Key!, context, default);
+            var before = await source.LoadAsync(created.Record.Key!, context, default);
             Execute(Connection, $"UPDATE {sourceName} SET \"TITLE\" = 'Outside change'");
-            Assert.Equal(409, (await checksum.UpdateAsync(created.Record.Key!, Json(new { title = "Stale checksum" }), before.Record!.Version!, context, default)).Status);
-            var fresh = await checksum.LoadAsync(created.Record.Key!, context, default);
-            Assert.Equal(204, (await checksum.DeleteAsync(created.Record.Key!, fresh.Record!.Version!, context, default)).Status);
+            Assert.Equal(409, (await source.UpdateAsync(created.Record.Key!, Json(new { title = "Stale checksum" }), before.Record!.Version!, context, default)).Status);
+            var fresh = await source.LoadAsync(created.Record.Key!, context, default);
+            Assert.Equal(204, (await source.DeleteAsync(created.Record.Key!, fresh.Record!.Version!, context, default)).Status);
             Assert.Equal(404, (await source.LoadAsync(created.Record.Key!, context, default)).Status);
         }
         finally

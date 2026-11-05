@@ -96,7 +96,7 @@ public sealed class TabularHttpTests
 
     private static SqliteConnection Open(TestSite site)
     {
-        var connection = new SqliteConnection($"Data Source={Path.Combine(site.DataRoot, "App_Data", SampleReport.DatabaseFile)};Pooling=False");
+        var connection = new SqliteConnection($"Data Source={site.ApplicationDatabaseFile(SampleReport.DatabaseFile)};Pooling=False");
         connection.Open();
         return connection;
     }

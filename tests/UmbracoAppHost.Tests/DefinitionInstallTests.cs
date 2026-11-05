@@ -85,7 +85,7 @@ public sealed class DefinitionInstallTests
         var grid = await services.GetRequiredService<IDataTypeService>().GetAsync(ApplicationGrid);
         Assert.Equal("Application: Application blocks", grid!.Name);
         Assert.Equal("OrdersPaperReport", types.Get("paperReport")!.DefaultTemplate?.Alias);
-        Assert.Equal(new[] { "sqlDataSource", "reportDefinition", "listOfValues" }, types.Get("dataSources")!.AllowedContentTypes!.OrderBy(child => child.SortOrder).Select(child => child.Alias));
+        Assert.Equal(new[] { "sqlDataSource", "reportDefinition", "listOfValues", "apiEndpoint" }, types.Get("dataSources")!.AllowedContentTypes!.OrderBy(child => child.SortOrder).Select(child => child.Alias));
 
         var contents = services.GetRequiredService<IContentService>();
         if (group == "Settings")

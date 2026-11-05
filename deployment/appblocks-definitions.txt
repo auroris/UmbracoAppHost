@@ -1,3 +1,5 @@
+ContentTypes/apiendpoint.config
+ContentTypes/apiendpoints.config
 ContentTypes/appactions.config
 ContentTypes/appantispam.config
 ContentTypes/appattachments.config
@@ -38,11 +40,15 @@ DataTypes/AppBlocksTable.config
 DataTypes/ApplicationAntiSpamService.config
 DataTypes/ApplicationAntiSpamSize.config
 DataTypes/ApplicationAntiSpamTheme.config
+DataTypes/ApplicationApiEndpointTest.config
+DataTypes/ApplicationApiRoute.config
+DataTypes/ApplicationApiShape.config
 DataTypes/ApplicationBackingClass.config
 DataTypes/ApplicationBoolean.config
 DataTypes/ApplicationColumnSplit.config
 DataTypes/ApplicationCSS.config
 DataTypes/ApplicationDataSourceAccess.config
+DataTypes/ApplicationDataSourceConcurrency.config
 DataTypes/ApplicationDataSourcePicker.config
 DataTypes/applicationdatasourcetest.config
 DataTypes/ApplicationFieldBinding.config
@@ -57,8 +63,10 @@ DataTypes/ApplicationListOfValuesPicker.config
 DataTypes/ApplicationMemberGroups.config
 DataTypes/ApplicationMultiline.config
 DataTypes/ApplicationPagePicker.config
+DataTypes/ApplicationReportLinkVisibility.config
 DataTypes/ApplicationReportSource.config
 DataTypes/ApplicationReportStartingView.config
+DataTypes/ApplicationReportUserGroups.config
 DataTypes/ApplicationRichText.config
 DataTypes/ApplicationScheduleColumns.config
 DataTypes/ApplicationText.config

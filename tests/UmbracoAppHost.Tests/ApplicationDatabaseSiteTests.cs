@@ -52,7 +52,7 @@ public sealed class ApplicationDatabaseSiteTests
 
         await TheFormResourceWritesWhereTheReportReads(scope.ServiceProvider);
         // Not the instance's own sample file, which nothing asked for.
-        Assert.False(File.Exists(Path.Combine(site.DataRoot, "App_Data", SampleReport.DatabaseFile)));
+        Assert.False(File.Exists(site.ApplicationDatabaseFile(SampleReport.DatabaseFile)));
     }
 
     [LocalDbFact]

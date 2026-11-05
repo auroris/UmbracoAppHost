@@ -113,7 +113,7 @@ public sealed class OrdersFormResource(IApplicationConnectionFactory connections
         return result;
     }
 
-    protected override async Task<FormResult> UpdateAsync(string key, OrderCommand input, string version, FormExecutionContext context, CancellationToken ct)
+    protected override async Task<FormResult> UpdateAsync(string key, OrderCommand input, string? version, FormExecutionContext context, CancellationToken ct)
     {
         if (!await AllowedAsync(context)) return FormResult.Denied();
         if (!ParseKey(key, out var id)) return FormResult.Missing();
@@ -133,7 +133,7 @@ public sealed class OrdersFormResource(IApplicationConnectionFactory connections
         return result;
     }
 
-    public override async Task<FormResult> DeleteAsync(string key, string version, FormExecutionContext context, CancellationToken ct)
+    public override async Task<FormResult> DeleteAsync(string key, string? version, FormExecutionContext context, CancellationToken ct)
     {
         if (!await AllowedAsync(context)) return FormResult.Denied();
         if (!ParseKey(key, out var id)) return FormResult.Missing();

@@ -12,7 +12,7 @@ selects a registered class, not a data source. Orders interactive reads the `ORD
 `ReportsSampleDb` connection directly, and a report block's source is a table or SQL query rather
 than a report name. All of them use the same orders table as the configured report: in the SQLite
 sample database, or on SQL Server when `ConnectionStrings:ReportsSampleDb` names one. Its
-migration adds a version column, the audit columns the data source fills, and the C# resource's
+migration adds the version column the C# resource compares, the audit columns the data source fills, and its
 submission receipts without replacing existing rows.
 
 ## Web Sites and Web Pages
@@ -347,8 +347,8 @@ their own table, read and written through a published data source (see
 [Tabular forms](../README.md#tabular-forms)), and are saved together: every change of one save is
 written, or none is.
 
-1. Publish a data source over the child table, such as `ORDER_LINES`, with its key, its version
-   column, its audit columns and the insert defaults a new row needs. Its read and write groups,
+1. Publish a data source over the child table, such as `ORDER_LINES`, with its key, **Checksum**
+   concurrency so a stale save is refused, its audit columns and the insert defaults a new row needs. Its read and write groups,
    allow flags, row restriction and policies govern the rows the block shows and writes.
 2. Place the block inside the form, in its fields area or in a region or fieldset there, usually
    after the fields, so it follows the record the form is editing. On its own, on a Web Page or at
@@ -427,7 +427,7 @@ source** beneath **Data sources** (create that root first on a site that has non
 alias, connection, row source and key columns, choose its required **Access** value and allowed operations, and publish. Publishing
 reads the schema through the connection and refuses the node with every reason at once when
 something does not fit: an unregistered connection, a missing table or column, a key that is not
-the table's primary or unique key, a version column that is not a whole number, an unknown bind
+the table's primary or unique key, an unknown concurrency mode, an unknown bind
 variable, or a custom statement that does not compile. Form Interface selects a registered C#
 form class; a data source is selected by the report, list, tabular form or schedule that reads it.
 

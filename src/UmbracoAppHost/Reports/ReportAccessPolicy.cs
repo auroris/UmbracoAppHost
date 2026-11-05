@@ -26,7 +26,11 @@ namespace UmbracoAppHost.Reports;
 /// also linked to such a backoffice user: the provider key stored with the external login (the
 /// Windows SID, whichever provider supplied it) joins the two. That link is this host's choice as
 /// a single sign-on host; AppBlocks never relates the two account stores.
-/// Everyone else is an ordinary report user. A saved view belongs to the one identity AppBlocks'
+/// Everyone else signed in is an ordinary report user. An anonymous visitor is refused every report
+/// unless <see cref="AccountsSettings.AllowAnonymousReportBlocks"/> is on; then they get AppBlocks'
+/// own answer, <see cref="AnonymousReportAccess.Allows"/>: a report block on a page without Public
+/// Access, whose SQL binds nobody, may be viewed, queried and exported, and every other report still
+/// needs an account. A saved view belongs to the one identity AppBlocks'
 /// <see cref="DefaultReportAccessPolicy.OwnerKey"/> names: the member when one is signed in, else the backoffice user.
 /// </remarks>
 public sealed class ReportAccessPolicy(
@@ -46,9 +50,10 @@ public sealed class ReportAccessPolicy(
     {
         cancellationToken.ThrowIfCancellationRequested();
         var user = request.User;
-        // This host shows anonymous visitors a sign-in form instead of blocks, so its report endpoints answer the same way.
+        // The definition store has already refused an anonymous visitor a block whose page has Public Access or whose
+        // source needs an account. With the site's consent what is left may be read, as on a plain AppBlocks site.
         if (user.Identity?.IsAuthenticated != true)
-            return false;
+            return accounts.Value.AllowAnonymousReportBlocks && AnonymousReportAccess.Allows(request);
         // Published block settings own their starting view. Saved personal views remain available.
         if (AppBlocks.Blocks.AppBlockContent.ParseReportName(request.Resource.ReportName, out _, out _)
             && request.Action == InteractiveReportAction.SelectDefaultReport) return false;

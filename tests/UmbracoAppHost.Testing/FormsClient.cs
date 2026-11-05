@@ -34,11 +34,11 @@ public sealed class FormsClient(HttpClient client, string pathBase, Guid pageKey
     public Task<FormResponse> CreateAsync(object values, string? query = null, string? submissionKey = null)
         => WriteAsync(HttpMethod.Post, api, query, values, null, submissionKey);
 
-    public Task<FormResponse> UpdateAsync(string key, string version, object values, string? query = null)
+    public Task<FormResponse> UpdateAsync(string key, string? version, object values, string? query = null)
         => WriteAsync(HttpMethod.Put, Record(key), query, values, version, null);
 
     /// <summary>Deletes a record with the JSON body the endpoint reads, as the runtime's Delete button sends it.</summary>
-    public async Task<HttpResponseMessage> DeleteAsync(string key, string version, string? query = null)
+    public async Task<HttpResponseMessage> DeleteAsync(string key, string? version, string? query = null)
         => (await WriteAsync(HttpMethod.Delete, Record(key), query, new { }, version, null)).Response;
 
     private string Record(string key) => $"{api}/{Uri.EscapeDataString(key)}";

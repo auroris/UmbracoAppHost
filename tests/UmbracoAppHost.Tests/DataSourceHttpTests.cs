@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using InteractiveReport.Core.Definitions;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Umbraco.Cms.Core.Services;
 using UmbracoAppHost.Application;
@@ -91,6 +92,11 @@ public sealed class DataSourceHttpTests
         Assert.Equal(HttpStatusCode.UnprocessableEntity, injection.Response.StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await orders.DeleteAsync(key, "2")).StatusCode);
         Assert.Equal(0L, Sample(site, $"SELECT COUNT(*) FROM ORDERS WHERE ORDER_ID = {key}"));
+        // A new site keeps the sample's SQLite file beside Umbraco's own SQLite database.
+        var umbracoDatabase = new SqliteConnectionStringBuilder(site.App.Configuration.GetConnectionString("umbracoDbDSN")).DataSource;
+        var sampleDatabase = site.ApplicationDatabaseFile(SampleReport.DatabaseFile);
+        Assert.Equal(Path.Combine(Path.GetDirectoryName(umbracoDatabase)!, SampleReport.DatabaseFile), sampleDatabase);
+        Assert.True(File.Exists(sampleDatabase));
 
         // A data source and a page published through Umbraco: publishing refuses mistakes and binds the page to the columns.
         Sample(site, """
@@ -102,7 +108,7 @@ public sealed class DataSourceHttpTests
         foreach (var (alias, value) in new (string, object)[] {
             ("access", "Not public"),
             ("alias", "pilot-notes"), ("connection", SampleReport.Connection), ("source", "PILOT_NOTES"), ("keyColumns", "NOTE_ID"),
-            ("concurrency", "VERSION"), ("allowInsert", 1), ("allowUpdate", 1), ("rowRestriction", "OWNER_SID = :USER_SID"),
+            ("concurrencyMode", "Checksum"), ("allowInsert", 1), ("allowUpdate", 1), ("rowRestriction", "OWNER_SID = :USER_SID"),
             ("insertDefaults", "OWNER_SID = :USER_SID\nTOPIC = :PARAM.topic"), ("writeGroups", pilots.Id.ToString()),
             ("mapping", """{ "topic": { "choices": ["Weather", "Fuel"] }, "mood": { "choices": ["Calm", "Busy"] }, "flownOn": { "kind": "date" }, "missing": "NO_SUCH_COLUMN" }"""),
         }) source.SetValue(alias, value);
@@ -218,7 +224,7 @@ public sealed class DataSourceHttpTests
     /// <summary>Runs SQL against the host's sample database, the one the ReportsSampleDb connection opens.</summary>
     private static object? Sample(TestSite site, string sql)
     {
-        using var connection = new SqliteConnection($"Data Source={Path.Combine(site.DataRoot, "App_Data", SampleReport.DatabaseFile)};Pooling=False");
+        using var connection = new SqliteConnection($"Data Source={site.ApplicationDatabaseFile(SampleReport.DatabaseFile)};Pooling=False");
         connection.Open();
         using var command = connection.CreateCommand();
         command.CommandText = sql;

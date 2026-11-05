@@ -155,7 +155,7 @@ ships the sample Orders report and form as nodes.
 
 | Node type | Fields |
 |---|---|
-| `sqlDataSource` | `alias`; `connection` (one of the connections registered in code, by alias); `source`: a table name or a SELECT; `keyColumns`; `mapping` (field alias to column; by name when omitted); `rowRestriction` (a predicate with bind variables, added to every fetch and write); `allowInsert`, `allowUpdate`, `allowDelete`; `concurrency`: a version column, or a checksum of the fetched row; `insertDefaults` (column to literal or bind variable); `auditColumns` (created/updated by/at, optional); `readGroups`, `writeGroups` (member groups; empty means the page's own access); `customStatements` (insert, update, delete with bind variables; advanced, off by default) |
+| `sqlDataSource` | `alias`; `connection` (one of the connections registered in code, by alias); `source`: a table name or a SELECT; `keyColumns`; `mapping` (field alias to column; by name when omitted); `rowRestriction` (a predicate with bind variables, added to every fetch and write); `allowInsert`, `allowUpdate`, `allowDelete`; `concurrencyMode`: LastSaveWins or Checksum (a checksum of the fetched row); `insertDefaults` (column to literal or bind variable); `auditColumns` (created/updated by/at, optional); `readGroups`, `writeGroups` (member groups; empty means the page's own access); `customStatements` (insert, update, delete with bind variables; advanced, off by default) |
 | `reportDefinition` | `alias`; `dataSource` (picker) or inline `connection` + `sql` for the migration period; the Interactive Reports options the appsettings definition has today: title, column labels, column help, controls, default and maximum page size, link columns |
 | `listOfValues` | `alias`; `dataSource` or inline SQL; `displayColumn`, `valueColumn`; optional bind parameters for cascading later |
 
@@ -186,8 +186,8 @@ for another field's current value. These are APEX's `:APP_USER` and friends in U
   on SQL Server, `RETURNING INTO` on Oracle, sequences on Oracle 11g). Identifiers are always
   validated against the introspected schema; editor text never reaches a statement except as a
   parameter value or, for custom statements, as the whole statement with bound parameters.
-- Lost-update protection: `UPDATE ... WHERE key = :key AND version = :version` with a version
-  column, otherwise a comparison with the checksum the fetch returned, as APEX does.
+- Lost-update protection is the source's `concurrencyMode`: **LastSaveWins** by default, or **Checksum**, which
+  compares the checksum the fetch returned with the row locked in the write transaction, as APEX does.
 - SQLite and SQL Server reads and writes are exercised locally. PostgreSQL and Oracle builders
   and metadata support are implemented; their live-provider tests run when test connections
   are configured.

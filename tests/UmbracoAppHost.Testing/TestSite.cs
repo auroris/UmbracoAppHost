@@ -90,8 +90,14 @@ public sealed partial class TestSite : IAsyncDisposable
     /// <summary>The library's <c>InstanceRoot</c>: <c>instance.json</c>, <c>data/</c>, <c>media/</c> and <c>uSync/</c>.</summary>
     public string InstanceRoot { get; }
 
-    /// <summary>The instance's data folder; the <c>App_Data/*.sqlite.db</c> files of the registered connections are under it.</summary>
+    /// <summary>The instance's data folder: Umbraco's SQLite database, and beside it the files of the registered application connections.</summary>
     public string DataRoot { get; }
+
+    /// <summary>
+    /// The SQLite file a connection registered with <c>AddApplicationDatabase</c> opens when nothing configures it, as AppBlocks
+    /// resolves it: beside Umbraco's SQLite database, or an existing file under <c>App_Data</c> from before that.
+    /// </summary>
+    public string ApplicationDatabaseFile(string fileName) => AppBlocks.Databases.ApplicationDatabase.DataFile(Services, fileName);
 
     /// <summary>The working uSync folder the site imported on first boot.</summary>
     public string USyncFolder { get; }

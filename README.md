@@ -116,7 +116,8 @@ overview, support and documentation, with a nested Web Site using APEX for the a
 Select **Website home** or **Application site** through Umbraco's template selector; ordinary
 Web Pages inherit the nearest site's selection. Configure **Public Access** on the application
 branch to protect it while leaving the overview public. Public Access is what protects a page's
-blocks. Without it, this host's report blocks still need an account, but a form's C# class decides
+blocks. Without it, this host's report blocks still need an account unless
+`Accounts:AllowAnonymousReportBlocks` is on, but a form's C# class decides
 for itself, even under a template that shows a sign-in form. **Site sign in** is available as an
 explicit Web Page template for its login page. Menu entries can name the signed-in person and
 offer their profile page and sign-out through replacement tokens such as `{{user.name}}`; see
@@ -437,6 +438,7 @@ set or reset them in **Users** and **Members**. OpenID sign-in does not replace 
 | `EnsureBackOfficeUsers` | Users created when missing (`Email`, `Name`, `UserGroups`). |
 | `EnsureMembers` | Members created when missing (`Email`, `Name`, `MemberGroups`). |
 | `ReportAdministratorUserGroups` | Backoffice groups whose users administer Interactive Reports, besides Umbraco's `admin` group and AppBlocks' **Interactive Reports Administrator** group (`interactiveReportsAdministrator`), which always do. The defaults name `admin` and this host's own **Interactive Report Administrators** group (`interactiveReportAdministrators`), which `ConfiguredAccounts` creates. |
+| `AllowAnonymousReportBlocks` | `false` by default: every report needs an account. `true` lets an anonymous visitor read report blocks on pages Umbraco Public Access leaves open, as AppBlocks allows; see [Interactive Reports](#interactive-reports). |
 | `MemberTypeAlias` | Type for directory-created and roster members. Native OpenID creation uses `MemberAutoLink:DefaultMemberTypeAlias`. |
 | `RetireDeletedUsers`, `RetireDeletedMembers` | Retire used accounts instead of removing them; both default to `true`. |
 
@@ -788,7 +790,18 @@ Authorization bridges Umbraco's two identities:
   first backoffice sign-in, email) matches such a backoffice user. `Reports/ReportAccessPolicy.cs`
   replaces AppBlocks' own policy to add that member link; AppBlocks never relates the two
   account stores, so a plain AppBlocks site has no such link.
-- Everyone else is an ordinary report user: public reports and their own saved reports.
+- Everyone else signed in is an ordinary report user: public reports and their own saved reports.
+- An anonymous visitor needs an account for every report unless `Accounts:AllowAnonymousReportBlocks`
+  is `true`. Then report blocks follow AppBlocks' own rule (`AnonymousReportAccess`), as on a plain
+  AppBlocks site: on a page Umbraco Public Access leaves open, a report block renders and may be
+  viewed, queried and exported without signing in; its saved views list as nothing, and saving,
+  printing and every other action need an account. A report block's own table or SQL counts as a
+  **Public** source that follows its page, so the page's Public Access is what protects it, and SQL
+  that binds `:USER_*` always needs an account. Every report that is not a block (configured and
+  published report definitions, the Welcome dashboard's, a **Report Page**'s) still needs one.
+  The setting is off by default because this host's uSync export carries no Public Access rules:
+  a new or upgraded site would otherwise show such blocks, including the sample orders, to anyone.
+  Protect the pages that need it before turning it on.
 - Saved reports are owned by the one identity that created them, the same one AppBlocks
   resolves (`DefaultReportAccessPolicy.OwnerKey`): the member when one is signed in,
   otherwise the backoffice user.
@@ -823,7 +836,7 @@ and its design in [section 4 of the design](docs/design-blocks-and-data-sources.
 | Key sequences | JSON, optional | Oracle sequence names for generated keys, including 11g: `{ "ORDER_ID": "ORDERS_SEQ" }`. Names are resolved against the database catalog |
 | Mapping | JSON, optional | Field alias to column, or to settings: `{ "client": "CUSTOMER", "orderDate": { "kind": "date" }, "region": { "choices": ["NORTH", "SOUTH"] } }`. Settings are `column`, `label`, `kind`, `choices`, `readOnly`, `required`, `maxLength`, `min` and `max`; an entry without `column` matches its column by name |
 | Allow insert, update, delete | toggles | What the engine performs; the rest is refused with 403 whatever a page shows |
-| Concurrency | column, optional | The version column: a `NOT NULL` whole number the engine increments, or a SQL Server `rowversion`. Empty compares a checksum of the fetched row instead, as APEX does |
+| Concurrency | choice | **LastSaveWins**, the default when empty: a later save replaces the row whatever changed since it was loaded. **Checksum**: the form carries a checksum of the row it loaded, and an update or delete compares it with the row locked in its transaction, refusing a changed row with 409, as APEX does; it needs no column in the table. AppBlocks' migration turns a source that named a version column into Checksum. A version column the table keeps for other writers is an ordinary column to the engine; map it `readOnly` |
 | Insert defaults | lines `COLUMN = value` | A bind variable, a `'quoted'` or plain literal, or `NULL`. A new record starts with these values, and an insert uses them for fields the form does not send |
 | Audit columns | lines, optional | `createdBy`, `createdAt`, `updatedBy`, `updatedAt` = a column. The engine writes the username and the server's local time; forms cannot change them |
 | Row restriction | predicate, optional | Added to every fetch and write, such as `OWNER_SID = :USER_SID` or `REGION IN (:USER_GROUPS)` |
@@ -837,8 +850,8 @@ type: text, number, date, time, date and time, or checkbox; binary columns are l
 keeps dates as text, so such columns take a `kind` in the mapping. A `NOT NULL` column is required;
 a column with a database default, an insert default or an engine-filled value need not be sent on
 create. Text without a declared length accepts 4000 characters unless the mapping allows more.
-Read only, and never written, are the keys the database assigns, computed columns, the version and
-audit columns, a SELECT's columns from other tables and its expressions, mapped `readOnly` fields,
+Read only, and never written, are the keys the database assigns, computed columns, the audit
+columns, a SELECT's columns from other tables and its expressions, mapped `readOnly` fields,
 and every field when neither insert nor update is allowed. A column a SELECT renames is read only
 too unless the mapping sets `"readOnly": false`, because a second copy of the key table in a
 self-join (`p.NAME AS PARENT_NAME`) looks the same in the schema. Any other bound field is written,
@@ -874,7 +887,8 @@ The engine reads through the Interactive Reports
 connection factory and takes the connection's dialect from it. Writes are generated from the
 schema: `INSERT` returning a new key through `RETURNING` (SQLite) or `OUTPUT INSERTED` into a table
 variable (SQL Server, which also works on tables with triggers), `UPDATE ... SET changed columns
-WHERE key AND version AND EXISTS (the row through the restriction)`, and `DELETE` likewise; each
+WHERE key AND EXISTS (the row through the restriction)`, and `DELETE` likewise, each after a
+**Checksum** source has compared the locked row with the one the form loaded; each
 must change exactly one row, counted without what triggers change (SQL Server reads `@@ROWCOUNT`). A
 write transaction holds the row: SQLite begins it `IMMEDIATE`, SQL Server takes `UPDLOCK, HOLDLOCK`
 on the row first. PostgreSQL uses `RETURNING` and `FOR UPDATE`; Oracle uses named output
@@ -899,7 +913,8 @@ run when a test database is configured; passing SQL builder tests alone does not
   insert. The request carries the engine's open connection and, for a write, its transaction, so a policy
   can read other rows in the same snapshot with its own command (`command.Transaction =
   request.Transaction`); it never commits, rolls back or disposes them.
-- A stale version, rowversion or checksum returns 409. Creates are idempotent per submission key
+- Under **Checksum** a row changed since it was loaded returns 409; under **LastSaveWins** the later
+  save replaces it. Creates are idempotent per submission key
   for fifteen minutes, in memory. Each operation is logged by the form endpoints, and the audit
   columns record who and when in the application's own table. A data source whose database or
   schema cannot be read answers 503 and is tried again a few seconds later; a statement the
@@ -912,7 +927,7 @@ run when a test database is configured; passing SQL builder tests alone does not
 **Publishing** a data source checks it against its database: the connection is registered, the row
 source and the restriction compile (a zero-row execution), every named column exists, the key
 columns are the primary key or a unique key of the written table when writes are allowed, the
-version column holds whole numbers, every bind variable is known and allowed where it is used, and
+concurrency mode is one of the two, every bind variable is known and allowed where it is used, and
 custom statements compile without running (`EXPLAIN` on SQLite, `SET NOEXEC` on SQL Server).
 Publishing a page bound to a data source checks its field blocks against the data source's
 columns. Data source nodes get URL segments of their own keys, so one named like a page (Orders)
@@ -943,16 +958,22 @@ A list selects its data source or inline SQL, display column and stored-value co
 stored value can remain after its option is retired. List and data source changes invalidate
 loaded forms. Shared queries apply the source's read groups,
 row restriction and `IDataSourcePolicy` with `DataSourceAction.Query`, including direct report
-aliases, which have no host-page context. Report blocks also keep their page's Public Access. This
-host's `ReportAccessPolicy` also requires an account for every report, so an anonymous visitor is
-refused even on a page without Public Access, unlike a plain AppBlocks site. Data source forms,
-tabular forms, schedules and lists of values also need an account.
+aliases, which have no host-page context. Report blocks also keep their page's Public Access.
+Tabular forms, schedules and lists of values let an anonymous visitor read a source whose
+**Access** is **Public** on a page without Public Access, as AppBlocks does. Reports need an account
+unless `Accounts:AllowAnonymousReportBlocks` lets report blocks follow the same rule (see the
+report authorization list above); other reports always need one.
 
 **The sample.** The saved export's Data sources root holds **Orders**: alias `orders`, connection
-`ReportsSampleDb`, table `ORDERS`, key `ORDER_ID`, version column `VERSION`, the four audit columns
+`ReportsSampleDb`, table `ORDERS`, key `ORDER_ID`, concurrency **Checksum**, the four audit columns
 `CREATED_BY`, `CREATED_AT`, `UPDATED_BY` and `UPDATED_AT` (which the sample database gains in
 place), insert defaults `NORTH`, `NEW`, `0` and `:NOW`, and a mapping that gives the order date
-its kind. Orders and Welcome reports also ship as nodes. The **Orders form** page selects the C#
+its kind and makes `version` read only. The **Orders lines** source over `ORDER_LINES` is set up the
+same way. Both tables keep a `VERSION` column that the `sample.orders` class compares and advances
+itself, as a C# resource with explicit version-column protection does; the data sources leave it
+to the database, whose `Sample/Schema/*/004-row-versions.sql` trigger advances it on any update
+that did not, so the class also sees a change saved through a data source as a newer version, and
+the data sources' checksum, which covers `VERSION`, sees the class's. Orders and Welcome reports also ship as nodes. The **Orders form** page selects the C#
 form class `sample.orders` (`Sample/OrdersFormResource.cs`) and the published region and status
 lists: a form binds a registered class, while a data source backs tabular forms and report nodes.
 uSync imports content by level and sort order, and the data source sorts first, so a new site
@@ -1226,8 +1247,8 @@ The common host keeps SQLite data outside app/, under the instance data director
 |---|---|---|
 | `data/Umbraco.sqlite.db` | Umbraco: users, members, content | Common host default; override `ConnectionStrings:umbracoDbDSN` in instance settings |
 | `data/App_Data/Reports.sqlite.db` | Saved reports and report authorization grants | the base's `Reports/InteractiveReportsSite.cs`, connection `ReportsDb` |
-| `data/App_Data/ReportsSample.sqlite.db` | Sample orders for the `orders` report, the Orders data source and the `sample.orders` resource | the common host's `Sample/SampleReport.cs`, connection `ReportsSampleDb`, schema `Sample/Schema/` |
-| `data/App_Data/Attachments.sqlite.db` | Record attachments: the files, their revisions and their links, unless `Attachments:Connection` names another connection | the base's `Attachments/`, connection `AttachmentsDb` |
+| `data/ReportsSample.sqlite.db` | Sample orders for the `orders` report, the Orders data sources and the `sample.orders` resource; an instance created before AppBlocks moved application files keeps using its `data/App_Data/ReportsSample.sqlite.db` | the common host's `Sample/SampleReport.cs`, connection `ReportsSampleDb`, schema `Sample/Schema/` |
+| `data/Attachments.sqlite.db` | Record attachments: the files, their revisions and their links, unless `Attachments:Connection` names another connection | the base's `Attachments/`, connection `AttachmentsDb` |
 
 ## Application databases
 
@@ -1246,8 +1267,11 @@ its schema, as any open does wherever its connection string comes from; only the
 leaves the schema alone. Its connection string is `ConnectionStrings:InnDb` with
 `ConnectionStrings:InnDb_ProviderName`, `Microsoft.Data.Sqlite` or `Microsoft.Data.SqlClient`; as
 for Umbraco, a connection string without a provider name is SQL Server. Without a connection string
-the database is a SQLite file in the instance's `App_Data` folder, `InnDb.sqlite.db` unless the
-third argument names another file.
+the database is a SQLite file beside Umbraco's SQLite database, so in the instance's `data` folder,
+`InnDb.sqlite.db` unless the third argument names another file. An instance that already has that
+file under `data/App_Data`, where earlier versions put it, keeps using it rather than starting an
+empty one there; move it beside Umbraco's while the site is stopped to change that. When Umbraco's
+database is not a SQLite file, the file stays under `App_Data`.
 
 The schema has a folder per dialect, `Schema/sqlite/`, `Schema/sqlserver/`, `Schema/postgresql/`
 and `Schema/oracle/`, of `.sql` files that run in file-name order (`001-tables.sql`,

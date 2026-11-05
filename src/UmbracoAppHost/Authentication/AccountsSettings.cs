@@ -73,6 +73,15 @@ public sealed class AccountsSettings
     public string[] ReportAdministratorUserGroups { get; set; } = [];
 
     /// <summary>
+    /// Lets an anonymous visitor read report blocks as a plain AppBlocks site does: on a page Umbraco Public Access
+    /// leaves open, a report block whose SQL binds no <c>:USER_*</c> value may be viewed, queried and exported without
+    /// signing in. A report block's own table or SQL counts as Public and follows its page. Off by default, so every
+    /// report needs an account: this host's export carries no Public Access rules, and a new or upgraded site would
+    /// otherwise show every such block's rows to anyone. Other reports always need an account.
+    /// </summary>
+    public bool AllowAnonymousReportBlocks { get; set; }
+
+    /// <summary>
     /// Member groups the first run creates when missing. In Active Directory mode these are the
     /// directory group names that admit members, so list the AD groups here.
     /// </summary>
