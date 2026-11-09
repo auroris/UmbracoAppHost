@@ -86,7 +86,7 @@ public sealed class DefinitionOwnershipTests
                 // the host; field settings and every other schema setting must still follow AppBlocks.
                 expected.Remove("areas");
                 actual.Remove("areas");
-                if (element == "322396a8-4598-4ff5-8312-6ee2cdf866cc") expected["allowInAreas"] = true;
+                if (element == AppBlocks.Blocks.AppBlockSchema.Key("appForm").ToString()) expected["allowInAreas"] = true;
             }
             Assert.True(JsonNode.DeepEquals(expected, actual), $"{file}'s {block["label"]} block differs from the schema's.");
         }

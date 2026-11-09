@@ -19,7 +19,8 @@ public sealed class AppBlocksDefinitions(IEnumerable<AppBlocksSchema> schemas)
         [Guid.Parse("97b36051-4abe-e750-6667-9cb7ee6a9a99")] = "DataTypes/ApplicationApplicationBlocks.config",
         // Documents' schema cannot name site templates. The host gives the type a default template, its place in the tree
         // and its name; PaperReportTemplates rewrites its allowed templates, which is why SiteTools.ps1 lists it as rewritten.
-        [Guid.Parse("996f23f8-7dfc-3686-50ed-a9b95c849ef5")] = "ContentTypes/paperreport.config",
+        // The key is the one AppBlocks derives for paperReport (AppBlockSchema.Key), so it changes with AppBlocks' key seed.
+        [Guid.Parse("d37dd9c4-23b9-4299-ae83-5bf6a943a842")] = "ContentTypes/paperreport.config",
     };
 
     private readonly Lazy<HashSet<Guid>> keys = new(() => [.. schemas.DistinctBy(schema => schema.Assembly)
