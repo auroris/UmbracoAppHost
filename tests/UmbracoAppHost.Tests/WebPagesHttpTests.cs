@@ -62,8 +62,8 @@ public sealed class WebPagesHttpTests
             page.SetCultureName(name, "en");
             page.SetCultureName(name, "fr");
             page.TemplateId = types.Get(alias)!.DefaultTemplate?.Id;
-            if (english is not null) page.SetValue(AppBlockSchema.BodyAlias, english.ToJsonString(), "en");
-            if (french is not null || english is not null) page.SetValue(AppBlockSchema.BodyAlias, (french ?? english)!.ToJsonString(), "fr");
+            if (english is not null) page.SetValue(ApplicationStarter.BlockPropertyAlias, english.ToJsonString(), "en");
+            if (french is not null || english is not null) page.SetValue(ApplicationStarter.BlockPropertyAlias, (french ?? english)!.ToJsonString(), "fr");
             Save(page);
             return page;
         }
@@ -332,8 +332,8 @@ public sealed class WebPagesHttpTests
         var refusedPage = contents.Create("Misprinted", site.Id, "webPage");
         refusedPage.SetCultureName("Misprinted", "en");
         refusedPage.SetCultureName("Misprinted", "fr");
-        refusedPage.SetValue(AppBlockSchema.BodyAlias, misprinted.ToJsonString(), "en");
-        refusedPage.SetValue(AppBlockSchema.BodyAlias, misprinted.ToJsonString(), "fr");
+        refusedPage.SetValue(ApplicationStarter.BlockPropertyAlias, misprinted.ToJsonString(), "en");
+        refusedPage.SetValue(ApplicationStarter.BlockPropertyAlias, misprinted.ToJsonString(), "fr");
         Assert.True(contents.Save(refusedPage).Success);
         var printRefusal = contents.Publish(refusedPage, ["*"]);
 #pragma warning restore CS0618
@@ -345,7 +345,7 @@ public sealed class WebPagesHttpTests
         // An unfinished translation must not prevent publishing the valid language.
         var invalidFrench = WebPageTestContent.Empty();
         WebPageTestContent.Layout(invalidFrench).Add(WebPageTestContent.Add(invalidFrench, "appText", ("field", "customer")));
-        overview.SetValue(AppBlockSchema.BodyAlias, invalidFrench.ToJsonString(), "fr");
+        overview.SetValue(ApplicationStarter.BlockPropertyAlias, invalidFrench.ToJsonString(), "fr");
 #pragma warning disable CS0618
         Assert.True(contents.Save(overview).Success);
         Assert.True(contents.Publish(overview, ["en"]).Success);

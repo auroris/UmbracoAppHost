@@ -34,21 +34,21 @@ public sealed class FormsClient(HttpClient client, string pathBase, Guid pageKey
     public Task<FormResponse> CreateAsync(object values, string? query = null, string? submissionKey = null)
         => WriteAsync(HttpMethod.Post, api, query, values, null, submissionKey);
 
-    public Task<FormResponse> UpdateAsync(string key, string? version, object values, string? query = null)
-        => WriteAsync(HttpMethod.Put, Record(key), query, values, version, null);
+    public Task<FormResponse> UpdateAsync(string key, string? checksum, object values, string? query = null)
+        => WriteAsync(HttpMethod.Put, Record(key), query, values, checksum, null);
 
     /// <summary>Deletes a record with the JSON body the endpoint reads, as the runtime's Delete button sends it.</summary>
-    public async Task<HttpResponseMessage> DeleteAsync(string key, string? version, string? query = null)
-        => (await WriteAsync(HttpMethod.Delete, Record(key), query, new { }, version, null)).Response;
+    public async Task<HttpResponseMessage> DeleteAsync(string key, string? checksum, string? query = null)
+        => (await WriteAsync(HttpMethod.Delete, Record(key), query, new { }, checksum, null)).Response;
 
     private string Record(string key) => $"{api}/{Uri.EscapeDataString(key)}";
 
-    private Task<FormResponse> WriteAsync(HttpMethod method, string path, string? query, object values, string? version, string? submissionKey)
+    private Task<FormResponse> WriteAsync(HttpMethod method, string path, string? query, object values, string? checksum, string? submissionKey)
     {
         if (definitionVersion is null) throw new TestSiteException($"Load the form at {api} before writing to it: a write carries the definition version and antiforgery token the load returns.");
         var request = new HttpRequestMessage(method, Http.WithQuery(path, query))
         {
-            Content = JsonContent.Create(new { values, definitionVersion, version, submissionKey = submissionKey ?? Guid.NewGuid().ToString() }),
+            Content = JsonContent.Create(new { values, definitionVersion, checksum, submissionKey = submissionKey ?? Guid.NewGuid().ToString() }),
         };
         request.Headers.Add("RequestVerificationToken", antiforgeryToken);
         return SendAsync(request);
@@ -69,7 +69,10 @@ public sealed record FormResponse(HttpResponseMessage Response, JsonElement Body
 {
     public bool IsSuccess => Response.IsSuccessStatusCode;
     public string? RecordKey => Http.Text(Record, "key");
-    public string? RecordVersion => Http.Text(Record, "version");
+    public string? RecordChecksum => Http.Text(Record, "checksum");
+    // Existing downstream test suites still use this name.
+    [Obsolete("Use RecordChecksum; the form protocol calls this field checksum.")]
+    public string? RecordVersion => RecordChecksum;
     public string? DefinitionVersion => Http.Text(Body, "definitionVersion");
 
     /// <summary>The record's values, or an empty object.</summary>

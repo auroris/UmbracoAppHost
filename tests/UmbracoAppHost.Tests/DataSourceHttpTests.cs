@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using InteractiveReport.Core.Definitions;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
@@ -84,9 +83,9 @@ public sealed class DataSourceHttpTests
         var badChoice = await orders.CreateAsync(new { customer = "Forged choice", region = "NOT-A-REGION", status = "NEW", amount = "1", orderDate = "2026-10-23" });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, badChoice.Response.StatusCode);
         var key = created.RecordKey!;
-        var version = created.RecordVersion!;
+        var version = created.RecordChecksum!;
         var updated = Ok(await orders.UpdateAsync(key, version, new { notes = "Updated by the member" }));
-        Assert.Equal("2", updated.RecordVersion);
+        Assert.Equal("2", updated.RecordChecksum);
         Assert.Equal(HttpStatusCode.Conflict, (await orders.UpdateAsync(key, version, new { notes = "Updated by the member" })).Response.StatusCode);
         var injection = await orders.UpdateAsync(key, "2", new { createdBy = "someone" });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, injection.Response.StatusCode);
@@ -122,19 +121,21 @@ public sealed class DataSourceHttpTests
         var published = contents.Publish(source, ["*"]);
         Assert.True(published.Success, string.Join(" ", published.EventMessages?.GetAll().Select(m => m.Message) ?? []));
 
-        // A form binds a registered C# class: a published data source backs tabular forms and reports, not forms.
-        var pilotBlocks = JsonNode.Parse(ApplicationStarter.FormContent())!;
-        foreach (var block in pilotBlocks["contentData"]!.AsArray())
-            foreach (var property in block!["values"]!.AsArray().Where(v => v!["alias"]!.GetValue<string>() == "listOfValues").ToArray())
-                block["values"]!.AsArray().Remove(property);
-        var body = pilotBlocks.ToJsonString(new JsonSerializerOptions { WriteIndented = true }).Replace("\"value\": \"sample.orders\"", "\"value\": \"pilot-notes\"");
-        var page = contents.Create("Pilot notes form", contents.GetById(ApplicationStarter.FormPageKey)!.ParentId, AppBlockSchema.PageAlias);
-        page.SetValue(AppBlockSchema.BodyAlias, body);
+        // Published SQL data sources now implement the form contract too, including defaults and SID restrictions.
+        var pilotBlocks = new AppBlockValues();
+        var pilotForm = pilotBlocks.Form("pilot-notes", [pilotBlocks.Field("appTextArea", "body"), pilotBlocks.Field("appSelect", "topic")]);
+        pilotBlocks.Place(pilotForm);
+        var page = contents.Create("Pilot notes form", contents.GetById(ApplicationStarter.FormPageKey)!.ParentId, ApplicationStarter.BlockPageAlias);
+        page.SetValue(ApplicationStarter.BlockPropertyAlias, pilotBlocks.ToJson());
         contents.Save(page);
-        var unbound = contents.Publish(page, ["*"]);
-        Assert.False(unbound.Success);
-        Assert.Contains(unbound.EventMessages!.GetAll(), m => m.Message.Contains("Select a registered C# form class."));
-        Sample(site, "INSERT INTO PILOT_NOTES (OWNER_SID, BODY, TOPIC) VALUES ('S-1-5-21-77', 'Smooth flight', 'Weather')");
+        var bound = contents.Publish(page, ["*"]);
+        Assert.True(bound.Success, string.Join(" ", bound.EventMessages?.GetAll().Select(m => m.Message) ?? []));
+        var notes = site.Forms(client, page.Key, pilotForm.Key);
+        Ok(await notes.LoadAsync());
+        var note = Ok(await notes.CreateAsync(new { body = "Draft flight", topic = "Weather" }));
+        Assert.Equal("S-1-5-21-77", Sample(site, $"SELECT OWNER_SID FROM PILOT_NOTES WHERE NOTE_ID = {note.RecordKey}"));
+        Ok(await notes.UpdateAsync(note.RecordKey!, note.RecordChecksum, new { body = "Smooth flight" }));
+        Assert.Equal(HttpStatusCode.NotFound, (await notes.LoadAsync("1")).Response.StatusCode); // Another person's seeded note.
 
         // A report source's page filter and member restriction apply to every report request.
         using (var publishScope = site.CreateScope())
@@ -176,7 +177,7 @@ public sealed class DataSourceHttpTests
         using (var publishScope = site.CreateScope())
         {
             var publisher = publishScope.ServiceProvider.GetRequiredService<IContentService>();
-            var list = publisher.GetById(AppBlockSchema.Key("definitions:order-region-values"))!;
+            var list = publisher.GetById(ApplicationStarter.Key("definitions:order-region-values"))!;
             list.SetValue("sql", "SELECT 'NORTH' AS VALUE, 'North' AS LABEL"); publisher.Save(list);
             Assert.True(publisher.Publish(list, ["*"]).Success);
         }
@@ -194,11 +195,11 @@ public sealed class DataSourceHttpTests
             SELECT last_insert_rowid();
             """)!.ToString()!;
         var legacy = Ok(await orders.LoadAsync(legacyKey));
-        var preserved = Ok(await orders.UpdateAsync(legacyKey, legacy.RecordVersion!, new { region = "WEST", notes = "Changed notes only" }));
+        var preserved = Ok(await orders.UpdateAsync(legacyKey, legacy.RecordChecksum!, new { region = "WEST", notes = "Changed notes only" }));
         Assert.Equal("WEST", preserved.Values.GetProperty("region").GetString());
-        var invalidLegacy = await orders.UpdateAsync(legacyKey, preserved.RecordVersion!, new { region = "SOUTH" });
+        var invalidLegacy = await orders.UpdateAsync(legacyKey, preserved.RecordChecksum!, new { region = "SOUTH" });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, invalidLegacy.Response.StatusCode);
-        var changedLegacy = Ok(await orders.UpdateAsync(legacyKey, preserved.RecordVersion!, new { region = "NORTH" }));
+        var changedLegacy = Ok(await orders.UpdateAsync(legacyKey, preserved.RecordChecksum!, new { region = "NORTH" }));
         Assert.Equal("NORTH", changedLegacy.Values.GetProperty("region").GetString());
 
         // An override whose referenced source is unpublished must not fall back to the configured seed.

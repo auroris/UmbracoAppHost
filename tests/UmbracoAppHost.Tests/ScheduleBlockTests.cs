@@ -15,7 +15,7 @@ public sealed class ScheduleBlockTests
         {
             var config = JsonNode.Parse(XElement.Load(Path.Combine(AppContext.BaseDirectory, "uSync", "DataTypes", file)).Element("Config")!.Value)!;
             var block = config["blocks"]!.AsArray().Single(b => b!["contentElementTypeKey"]!.GetValue<string>() == key)!;
-            Assert.Equal(AppBlockSchema.Key("blockgroup:Content").ToString(), block["groupKey"]!.GetValue<string>());
+            Assert.Equal(ApplicationStarter.Key("blockgroup:Content").ToString(), block["groupKey"]!.GetValue<string>());
             Assert.True(block["allowAtRoot"]!.GetValue<bool>());
             Assert.True(block["allowInAreas"]!.GetValue<bool>());
         }

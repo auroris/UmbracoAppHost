@@ -17,7 +17,7 @@ public sealed class TabularBlockTests
             var blocks = config["blocks"]!.AsArray();
             var block = blocks.Single(b => b!["contentElementTypeKey"]!.GetValue<string>() == key)!;
             Assert.Equal("Tabular form", block["label"]!.GetValue<string>());
-            Assert.Equal(AppBlockSchema.Key("blockgroup:Content").ToString(), block["groupKey"]!.GetValue<string>());
+            Assert.Equal(ApplicationStarter.Key("blockgroup:Content").ToString(), block["groupKey"]!.GetValue<string>());
             Assert.True(block["allowAtRoot"]!.GetValue<bool>());
             Assert.True(block["allowInAreas"]!.GetValue<bool>());
             // Right after the Attachments block, which it resembles.

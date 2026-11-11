@@ -134,11 +134,11 @@ public sealed class ApplicationDatabaseSiteTests
         report.Open();
         Assert.Equal("Written by the form", await Scalar(report, $"SELECT NOTES FROM ORDERS WHERE ORDER_ID = {created.Record.Key}"));
 
-        var updated = await resource.UpdateAsync(created.Record.Key!, input, created.Record.Version!, context, default);
+        var updated = await resource.UpdateAsync(created.Record.Key!, input, created.Record.Checksum!, context, default);
         Assert.Equal(200, updated.Status);
-        Assert.NotEqual(created.Record.Version, updated.Record!.Version);
-        Assert.Equal(409, (await resource.DeleteAsync(created.Record.Key!, created.Record.Version!, context, default)).Status);
-        Assert.Equal(204, (await resource.DeleteAsync(created.Record.Key!, updated.Record.Version!, context, default)).Status);
+        Assert.NotEqual(created.Record.Checksum, updated.Record!.Checksum);
+        Assert.Equal(409, (await resource.DeleteAsync(created.Record.Key!, created.Record.Checksum!, context, default)).Status);
+        Assert.Equal(204, (await resource.DeleteAsync(created.Record.Key!, updated.Record.Checksum!, context, default)).Status);
         Assert.Equal(0L, Convert.ToInt64(await Scalar(report, $"SELECT COUNT(*) FROM ORDERS WHERE ORDER_ID = {created.Record.Key}")));
     }
 

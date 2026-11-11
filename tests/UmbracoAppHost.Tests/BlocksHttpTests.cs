@@ -36,8 +36,8 @@ public sealed class BlocksHttpTests
         Assert.Equal(prefix, site.PathBase);
         using var scope = site.CreateScope(); var services = scope.ServiceProvider;
         var types = services.GetRequiredService<IContentTypeService>();
-        for (var i = 0; i < 100 && types.Get(AppBlockSchema.PageAlias)?.AllowedTemplates?.Any() != true; i++) await Task.Delay(100);
-        Assert.NotNull(types.Get(AppBlockSchema.PageAlias));
+        for (var i = 0; i < 100 && types.Get(ApplicationStarter.BlockPageAlias)?.AllowedTemplates?.Any() != true; i++) await Task.Delay(100);
+        Assert.NotNull(types.Get(ApplicationStarter.BlockPageAlias));
         var contents = services.GetRequiredService<IContentService>();
         var form = contents.GetById(ApplicationStarter.FormPageKey)!;
         var report = contents.GetById(ApplicationStarter.ReportPageKey)!;
@@ -98,13 +98,13 @@ public sealed class BlocksHttpTests
         Assert.Equal("4", loaded.RecordKey);
         Assert.Equal(25, (await reports.RowsAsync(reportName)).GetArrayLength());
         // Without the antiforgery header the browser runtime sends, a write is refused.
-        var submission = new { definitionVersion = loaded.DefinitionVersion, version = loaded.RecordVersion, values = new { notes = "Changed through form endpoint" }, submissionKey = Guid.NewGuid().ToString() };
+        var submission = new { definitionVersion = loaded.DefinitionVersion, checksum = loaded.RecordChecksum, values = new { notes = "Changed through form endpoint" }, submissionKey = Guid.NewGuid().ToString() };
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync(formUrl + "/4", submission)).StatusCode);
-        var injection = await forms.UpdateAsync("4", loaded.RecordVersion!, new { orderId = "999" });
+        var injection = await forms.UpdateAsync("4", loaded.RecordChecksum!, new { orderId = "999" });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, injection.Response.StatusCode);
-        var update = await forms.UpdateAsync("4", loaded.RecordVersion!, submission.values);
+        var update = await forms.UpdateAsync("4", loaded.RecordChecksum!, submission.values);
         Assert.True(update.IsSuccess, update.Body.GetRawText());
-        Assert.Equal(HttpStatusCode.Conflict, (await forms.UpdateAsync("4", loaded.RecordVersion!, submission.values)).Response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await forms.UpdateAsync("4", loaded.RecordChecksum!, submission.values)).Response.StatusCode);
 
         var access = services.GetRequiredService<IPublicAccessService>();
         var entry = new PublicAccessEntry(report, form, form, [new PublicAccessRule { RuleType = Constants.Conventions.PublicAccess.MemberRoleRuleType, RuleValue = "No test members" }]);
@@ -164,9 +164,9 @@ public sealed class BlocksHttpTests
             Assert.Equal(200, (await resource.LoadAsync("4", context, default)).Status);
             var created = await resource.CreateAsync(input, context, default);
             Assert.Equal(200, created.Status);
-            var updated = await resource.UpdateAsync(created.Record!.Key!, input, created.Record.Version!, context, default);
+            var updated = await resource.UpdateAsync(created.Record!.Key!, input, created.Record.Checksum!, context, default);
             Assert.Equal(200, updated.Status);
-            Assert.Equal(204, (await resource.DeleteAsync(updated.Record!.Key!, updated.Record.Version!, context, default)).Status);
+            Assert.Equal(204, (await resource.DeleteAsync(updated.Record!.Key!, updated.Record.Checksum!, context, default)).Status);
             editor.RemoveGroup(Constants.Security.AdminGroupAlias);
             users.Save(editor);
             Assert.Equal(HttpStatusCode.Forbidden, (await forms.LoadAsync()).Response.StatusCode);

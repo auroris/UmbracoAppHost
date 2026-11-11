@@ -14,7 +14,7 @@ namespace UmbracoAppHost.Tests;
 public sealed class TabularHttpTests
 {
     private static readonly Guid WebsiteContentBlocksPage = Guid.Parse("d9a69f9f-f8e4-dc51-76c8-9d1ec178b238");
-    private static readonly Guid WebsiteLines = AppBlockSchema.Key("sample:website-content-blocks:lines");
+    private static readonly Guid WebsiteLines = ApplicationStarter.Key("sample:website-content-blocks:lines");
     private static readonly string[] Columns = ["item", "quantity", "unitPrice", "notes"];
 
     [Fact]
@@ -59,6 +59,18 @@ public sealed class TabularHttpTests
         var website = await site.Tabular(client, WebsiteContentBlocksPage, WebsiteLines).ListAsync("id=4");
         Assert.True(website.IsSuccess, website.Problem);
         Assert.Equal(Keys(site, 4), website.Rows.Select(r => r.GetProperty("key").GetString()!).ToArray());
+
+        // The test client must carry the current checksum on updates and deletes, as the browser does.
+        var row = Assert.Single(saved.Rows, row => row.GetProperty("values").GetProperty("item").GetString() == saving);
+        var key = row.GetProperty("key").GetString();
+        var checksum = row.GetProperty("checksum").GetString();
+        var updated = await lines.SaveAsync([new("update", key, checksum, new { quantity = "4" })], "id=4");
+        Assert.True(updated.IsSuccess, updated.Body.ToString());
+        Assert.Equal(HttpStatusCode.Conflict, (await lines.SaveAsync([new("update", key, checksum, new { quantity = "5" })], "id=4")).Response.StatusCode);
+        var current = Assert.Single(updated.Rows, row => row.GetProperty("key").GetString() == key);
+        var removed = await lines.SaveAsync([new("delete", key, current.GetProperty("checksum").GetString())], "id=4");
+        Assert.True(removed.IsSuccess, removed.Body.ToString());
+        Assert.Equal(seeded, Keys(site, 4));
 
         // The page renders in the host's own template; both shells' stylesheets carry the block.
         using (var page = await site.GetPageAsync(client, "/orders-form/?id=4"))

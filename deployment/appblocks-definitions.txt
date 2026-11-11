@@ -49,6 +49,7 @@ DataTypes/ApplicationColumnSplit.config
 DataTypes/ApplicationCSS.config
 DataTypes/ApplicationDataSourceAccess.config
 DataTypes/ApplicationDataSourceConcurrency.config
+DataTypes/ApplicationDataSourceDateTimes.config
 DataTypes/ApplicationDataSourcePicker.config
 DataTypes/applicationdatasourcetest.config
 DataTypes/ApplicationFieldBinding.config
@@ -63,6 +64,7 @@ DataTypes/ApplicationListOfValuesPicker.config
 DataTypes/ApplicationMemberGroups.config
 DataTypes/ApplicationMultiline.config
 DataTypes/ApplicationPagePicker.config
+DataTypes/ApplicationReportAccess.config
 DataTypes/ApplicationReportLinkVisibility.config
 DataTypes/ApplicationReportSource.config
 DataTypes/ApplicationReportStartingView.config

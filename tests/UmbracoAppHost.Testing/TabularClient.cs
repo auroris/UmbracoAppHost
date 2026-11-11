@@ -3,8 +3,8 @@ using System.Text.Json;
 
 namespace UmbracoAppHost.Testing;
 
-/// <summary>One change of a batch: <c>create</c> with values, <c>update</c> with the key, the version and the changed values, or <c>delete</c> with the key and the version.</summary>
-public sealed record TabularChange(string Operation, string? Key = null, string? Version = null, object? Values = null);
+/// <summary>One change of a batch: <c>create</c> with values, <c>update</c> with the key, checksum and changed values, or <c>delete</c> with the key and checksum.</summary>
+public sealed record TabularChange(string Operation, string? Key = null, string? Checksum = null, object? Values = null);
 
 /// <summary>
 /// Drives <c>/api/tabular</c> as the Tabular form block's runtime does: the list's antiforgery token goes on every
@@ -32,7 +32,7 @@ public sealed class TabularClient(HttpClient client, string pathBase, Guid pageK
         {
             Content = JsonContent.Create(new {
                 submissionKey = submissionKey ?? Guid.NewGuid().ToString(),
-                changes = changes.Select(change => new { operation = change.Operation, key = change.Key, version = change.Version, values = change.Values }).ToArray(),
+                changes = changes.Select(change => new { operation = change.Operation, key = change.Key, checksum = change.Checksum, values = change.Values }).ToArray(),
             }),
         };
         request.Headers.Add("RequestVerificationToken", antiforgeryToken

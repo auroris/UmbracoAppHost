@@ -17,7 +17,7 @@ public sealed class ContentBlocksTests
             .Element("Config")!.Value)!;
         var blocks = config["blocks"]!.AsArray().Select(b => b!).ToArray();
         JsonNode Block(string alias) => blocks.Single(b => b["contentElementTypeKey"]!.GetValue<string>() == AppBlockSchema.Key(alias).ToString());
-        var content = AppBlockSchema.Key("blockgroup:Content").ToString();
+        var content = ApplicationStarter.Key("blockgroup:Content").ToString();
         foreach (var alias in AppBlockSchema.ContentAliases)
         {
             var block = Block(alias);
@@ -32,5 +32,5 @@ public sealed class ContentBlocksTests
 
     /// <summary>The Content blocks page of the saved export, which shows every new block and field property.</summary>
     internal static string DemoContent() => XElement.Load(Path.Combine(AppContext.BaseDirectory, "uSync", "Content", "content-blocks.config"))
-        .Element("Properties")!.Element(AppBlockSchema.BodyAlias)!.Element("Value")!.Value;
+        .Element("Properties")!.Element(ApplicationStarter.BlockPropertyAlias)!.Element("Value")!.Value;
 }

@@ -28,15 +28,15 @@ public sealed class BlockLayoutsHttpTests
         using var scope = host.CreateScope();
         var services = scope.ServiceProvider;
         var types = services.GetRequiredService<IContentTypeService>();
-        for (var i = 0; i < 100 && types.Get(AppBlockSchema.PageAlias)?.AllowedTemplates?.Any() != true; i++) await Task.Delay(100);
+        for (var i = 0; i < 100 && types.Get(ApplicationStarter.BlockPageAlias)?.AllowedTemplates?.Any() != true; i++) await Task.Delay(100);
         var contents = services.GetRequiredService<IContentService>();
 
         // First boot imported the demo page, and publishing it passed the block validation.
-        var layouts = contents.GetById(AppBlockSchema.Key("sample:layouts"));
+        var layouts = contents.GetById(ApplicationStarter.Key("sample:layouts"));
         Assert.NotNull(layouts);
         Assert.True(layouts.Published);
 
-        AssertLayoutsNeverNest(await services.GetRequiredService<IDataTypeService>().GetAsync(AppBlockSchema.Key("datatype:Application blocks")));
+        AssertLayoutsNeverNest(await services.GetRequiredService<IDataTypeService>().GetAsync(ApplicationStarter.Key("datatype:Application blocks")));
 
         // The same blocks beneath a website root render in the website shell.
 #pragma warning disable CS0618
@@ -45,9 +45,9 @@ public sealed class BlockLayoutsHttpTests
         website.TemplateId = types.Get("appHostWebsite")!.DefaultTemplate?.Id;
         Assert.True(contents.Save(website).Success);
         Assert.True(contents.Publish(website, ["*"]).Success);
-        var copy = contents.Create("Layouts in the website", website.Id, AppBlockSchema.PageAlias);
-        copy.TemplateId = types.Get(AppBlockSchema.PageAlias)!.DefaultTemplate?.Id;
-        copy.SetValue(AppBlockSchema.BodyAlias, LayoutsContent());
+        var copy = contents.Create("Layouts in the website", website.Id, ApplicationStarter.BlockPageAlias);
+        copy.TemplateId = types.Get(ApplicationStarter.BlockPageAlias)!.DefaultTemplate?.Id;
+        copy.SetValue(ApplicationStarter.BlockPropertyAlias, LayoutsContent());
         Assert.True(contents.Save(copy).Success);
         var published = contents.Publish(copy, ["*"]);
         Assert.True(published.Success, string.Join(" ", published.EventMessages?.GetAll().Select(m => m.Message) ?? []));
@@ -88,10 +88,10 @@ public sealed class BlockLayoutsHttpTests
         AssertLayouts(site);
 
         // The saved website gallery imports alongside the application gallery on first boot.
-        var websiteDemo = contents.GetById(AppBlockSchema.Key("sample:theme-website"));
+        var websiteDemo = contents.GetById(ApplicationStarter.Key("sample:theme-website"));
         Assert.NotNull(websiteDemo);
         Assert.True(websiteDemo.Published);
-        var websiteLayouts = contents.GetById(AppBlockSchema.Key("sample:website-layouts"));
+        var websiteLayouts = contents.GetById(ApplicationStarter.Key("sample:website-layouts"));
         Assert.NotNull(websiteLayouts);
         Assert.True(websiteLayouts.Published);
 
@@ -109,7 +109,7 @@ public sealed class BlockLayoutsHttpTests
             ("sample:orders-paper-report-fr", "Commandes", "fr-CA"),
         })
         {
-            var paper = contents.GetById(AppBlockSchema.Key(alias));
+            var paper = contents.GetById(ApplicationStarter.Key(alias));
             Assert.NotNull(paper);
             Assert.True(paper.Published);
             using var downloaded = await host.DownloadPaperReportAsync(client, paper.Key, "?id=1");
@@ -248,5 +248,5 @@ public sealed class BlockLayoutsHttpTests
     }
 
     private static string LayoutsContent()
-        => USyncExport.ContentByKey(ApplicationStarter.Export, AppBlockSchema.Key("sample:layouts")).Property(AppBlockSchema.BodyAlias)!;
+        => USyncExport.ContentByKey(ApplicationStarter.Export, ApplicationStarter.Key("sample:layouts")).Property(ApplicationStarter.BlockPropertyAlias)!;
 }

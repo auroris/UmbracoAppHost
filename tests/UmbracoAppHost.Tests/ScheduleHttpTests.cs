@@ -17,8 +17,8 @@ namespace UmbracoAppHost.Tests;
 [Collection("Umbraco hosts")]
 public sealed class ScheduleHttpTests
 {
-    private static readonly Guid SchedulePage = AppBlockSchema.Key("sample:orders-schedule");
-    private static readonly Guid WebsiteSchedulePage = AppBlockSchema.Key("sample:orders-schedule-website");
+    private static readonly Guid SchedulePage = ApplicationStarter.Key("sample:orders-schedule");
+    private static readonly Guid WebsiteSchedulePage = ApplicationStarter.Key("sample:orders-schedule-website");
     private static readonly CultureInfo English = CultureInfo.GetCultureInfo("en");
 
     [Fact]
@@ -83,12 +83,12 @@ public sealed class ScheduleHttpTests
         using var scope = site.CreateScope();
         var contents = scope.ServiceProvider.GetRequiredService<IContentService>();
         var original = contents.GetById(SchedulePage)!;
-        var blocks = JsonNode.Parse(original.GetValue<string>(AppBlockSchema.BodyAlias)!)!;
+        var blocks = JsonNode.Parse(original.GetValue<string>(ApplicationStarter.BlockPropertyAlias)!)!;
         foreach (var value in blocks["contentData"]![0]!["values"]!.AsArray())
             if (value!["alias"]!.GetValue<string>() == ScheduleSettings.BarsSourceAlias) value["value"] = "orders.schedule-rows";
-        var copy = contents.Create("Broken schedule", original.ParentId, AppBlockSchema.PageAlias);
+        var copy = contents.Create("Broken schedule", original.ParentId, ApplicationStarter.BlockPageAlias);
         copy.TemplateId = original.TemplateId;
-        copy.SetValue(AppBlockSchema.BodyAlias, blocks.ToJsonString());
+        copy.SetValue(ApplicationStarter.BlockPropertyAlias, blocks.ToJsonString());
         Assert.True(contents.Save(copy).Success);
 #pragma warning disable CS0618
         var published = contents.Publish(copy, ["*"]);

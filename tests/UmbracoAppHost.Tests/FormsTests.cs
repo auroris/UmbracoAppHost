@@ -73,12 +73,12 @@ public sealed class FormsTests
         var repeated = await resource.CreateAsync(input, context, default);
         Assert.Equal(created.Record.Key, repeated.Record!.Key);
         var changed = JsonNode.Parse(input.GetRawText())!; changed["notes"] = null;
-        var updated = await resource.UpdateAsync(created.Record.Key!, JsonSerializer.SerializeToElement(changed), created.Record.Version!, context, default);
+        var updated = await resource.UpdateAsync(created.Record.Key!, JsonSerializer.SerializeToElement(changed), created.Record.Checksum!, context, default);
         Assert.Equal(200, updated.Status); Assert.Null(updated.Record!.Values["notes"]);
-        Assert.NotEqual(created.Record.Version, updated.Record.Version);
-        Assert.Equal(409, (await resource.UpdateAsync(created.Record.Key!, input, created.Record.Version!, context, default)).Status);
-        Assert.Equal(409, (await resource.DeleteAsync(created.Record.Key!, created.Record.Version!, context, default)).Status);
-        Assert.Equal(204, (await resource.DeleteAsync(created.Record.Key!, updated.Record.Version!, context, default)).Status);
+        Assert.NotEqual(created.Record.Checksum, updated.Record.Checksum);
+        Assert.Equal(409, (await resource.UpdateAsync(created.Record.Key!, input, created.Record.Checksum!, context, default)).Status);
+        Assert.Equal(409, (await resource.DeleteAsync(created.Record.Key!, created.Record.Checksum!, context, default)).Status);
+        Assert.Equal(204, (await resource.DeleteAsync(created.Record.Key!, updated.Record.Checksum!, context, default)).Status);
         Assert.Equal(404, (await resource.CreateAsync(input, context, default)).Status); // Receipt survives deletion.
     }
 

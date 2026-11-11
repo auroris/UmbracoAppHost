@@ -43,7 +43,7 @@ public sealed class AnonymousReportTests
         var page = contents.Create("Anonymous report", website.Id, "webPage");
         page.SetCultureName("Anonymous report", "en");
         page.TemplateId = types.Get("webPage")!.DefaultTemplate?.Id;
-        page.SetValue(AppBlockSchema.BodyAlias, body.ToJsonString(), "en");
+        page.SetValue(ApplicationStarter.BlockPropertyAlias, body.ToJsonString(), "en");
         Publish(contents, page);
 #pragma warning restore CS0618
         var reportName = AppBlockContent.ReportName(page.Key, ApplicationStarter.ReportKey);
@@ -73,7 +73,7 @@ public sealed class AnonymousReportTests
         WebPageTestContent.SetValue(WebPageTestContent.Blocks(body, "appReport").Single(), "dataSource", JsonSerializer.Serialize(new {
             kind = "sql", connection = SampleReport.Connection, source = "SELECT ORDER_ID, CUSTOMER FROM ORDERS WHERE CREATED_BY = :USER_NAME" }));
         page = contents.GetById(page.Key)!;
-        page.SetValue(AppBlockSchema.BodyAlias, body.ToJsonString(), "en");
+        page.SetValue(ApplicationStarter.BlockPropertyAlias, body.ToJsonString(), "en");
         Publish(contents, page);
         Assert.False((await reports.SchemaAsync(reportName)).IsSuccessStatusCode);
         var html = await Html(site, anonymous);

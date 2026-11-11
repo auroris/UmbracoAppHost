@@ -41,11 +41,11 @@ public sealed class ContentBlocksHttpTests
         using var scope = site.CreateScope();
         var services = scope.ServiceProvider;
         var types = services.GetRequiredService<IContentTypeService>();
-        for (var i = 0; i < 100 && types.Get(AppBlockSchema.PageAlias)?.AllowedTemplates?.Any() != true; i++) await Task.Delay(100);
+        for (var i = 0; i < 100 && types.Get(ApplicationStarter.BlockPageAlias)?.AllowedTemplates?.Any() != true; i++) await Task.Delay(100);
         var contents = services.GetRequiredService<IContentService>();
 
         // First boot imported the demo page, and publishing it passed the block validation.
-        var demo = contents.GetById(AppBlockSchema.Key("sample:content-blocks"));
+        var demo = contents.GetById(ApplicationStarter.Key("sample:content-blocks"));
         Assert.NotNull(demo);
         Assert.True(demo.Published);
 
@@ -55,10 +55,10 @@ public sealed class ContentBlocksHttpTests
         await services.GetRequiredService<AccountProvisioning>().LinkAsync(member.Key, Sid, ["UmbracoMembers.Domain"]);
 
         // The demo page's blocks again, with every field defaulting to one of the bind variables.
-        var template = types.Get(AppBlockSchema.PageAlias)!.DefaultTemplate?.Id;
-        var variables = contents.Create("Bind variables", demo.ParentId, AppBlockSchema.PageAlias);
+        var template = types.Get(ApplicationStarter.BlockPageAlias)!.DefaultTemplate?.Id;
+        var variables = contents.Create("Bind variables", demo.ParentId, ApplicationStarter.BlockPageAlias);
         variables.TemplateId = template;
-        variables.SetValue(AppBlockSchema.BodyAlias, WithDefaults(ContentBlocksTests.DemoContent(), new Dictionary<string, string>
+        variables.SetValue(ApplicationStarter.BlockPropertyAlias, WithDefaults(ContentBlocksTests.DemoContent(), new Dictionary<string, string>
         {
             ["customer"] = ":USER_NAME", ["notes"] = ":USER_EMAIL", ["status"] = ":USER_SID",
             ["amount"] = ":USER_KEY", ["orderDate"] = ":NOW", ["region"] = ":param.region",
@@ -73,9 +73,9 @@ public sealed class ContentBlocksHttpTests
         website.TemplateId = types.Get("appHostWebsite")!.DefaultTemplate?.Id;
         Assert.True(contents.Save(website).Success);
         Assert.True(contents.Publish(website, ["*"]).Success);
-        var copy = contents.Create("Content blocks in the website", website.Id, AppBlockSchema.PageAlias);
+        var copy = contents.Create("Content blocks in the website", website.Id, ApplicationStarter.BlockPageAlias);
         copy.TemplateId = template;
-        copy.SetValue(AppBlockSchema.BodyAlias, ContentBlocksTests.DemoContent());
+        copy.SetValue(ApplicationStarter.BlockPropertyAlias, ContentBlocksTests.DemoContent());
         Assert.True(contents.Save(copy).Success);
         published = contents.Publish(copy, ["*"]);
         Assert.True(published.Success, string.Join(" ", published.EventMessages?.GetAll().Select(m => m.Message) ?? []));
@@ -157,7 +157,7 @@ public sealed class ContentBlocksHttpTests
         }
 
         // A hidden field is bound and submitted like any other: a new order sets the hidden status.
-        var forms = site.Forms(client, demo.Key, AppBlockSchema.Key("sample:content-blocks-form"));
+        var forms = site.Forms(client, demo.Key, ApplicationStarter.Key("sample:content-blocks-form"));
         var initialized = await forms.LoadAsync();
         Assert.True(initialized.IsSuccess, initialized.Body.GetRawText());
         Assert.Equal("NEW", initialized.Values.GetProperty("status").GetString());

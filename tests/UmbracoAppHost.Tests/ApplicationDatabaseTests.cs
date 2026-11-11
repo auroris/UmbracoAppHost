@@ -20,7 +20,7 @@ public sealed class ApplicationDatabaseTests
         SampleData.EnsureSeeded(file);
         Assert.Equal(500L, Scalar(file, "SELECT COUNT(*) FROM ORDERS"));
         Assert.Equal(5L, Scalar(file, "SELECT COUNT(*) FROM pragma_table_info('ORDERS') WHERE name IN ('VERSION', 'CREATED_BY', 'CREATED_AT', 'UPDATED_BY', 'UPDATED_AT')"));
-        Assert.Equal("001-orders.sql", Scalar(file, "SELECT SCRIPT FROM APP_SCHEMA"));
+        Assert.Equal("UmbracoAppHost:Sample/Schema/001-orders.sql", Scalar(file, "SELECT SCRIPT FROM APP_SCHEMA"));
         // One to three lines for each of the first 120 orders.
         Assert.Equal(120L, Scalar(file, "SELECT COUNT(DISTINCT ORDER_ID) FROM ORDER_LINES WHERE ORDER_ID BETWEEN 1 AND 120"));
         Assert.InRange((long)Scalar(file, "SELECT COUNT(*) FROM ORDER_LINES")!, 120L, 360L);
