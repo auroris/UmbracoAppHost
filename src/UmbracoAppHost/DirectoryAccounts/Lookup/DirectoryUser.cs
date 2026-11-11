@@ -67,6 +67,9 @@ public record DirectoryUser
 
     /// <summary>Whether the account is enabled: the <c>ACCOUNTDISABLE</c> bit of <c>userAccountControl</c> is clear.</summary>
     public bool Enabled { get; init; }
+
+    /// <summary>Additional attributes requested by the caller, trimmed and omitted when empty.</summary>
+    public IReadOnlyDictionary<string, string> Attributes { get; init; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>A <see cref="DirectoryUser"/> with the groups the account belongs to directly.</summary>

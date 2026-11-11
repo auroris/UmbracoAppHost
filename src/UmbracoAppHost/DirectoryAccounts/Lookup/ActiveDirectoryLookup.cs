@@ -73,7 +73,8 @@ public sealed class ActiveDirectoryLookup : IDirectoryLookup
     }
 
     /// <inheritdoc/>
-    public Task<IReadOnlyList<DirectoryUser>> SearchUsersAsync(string? query, int? take = null, DirectoryScope scope = DirectoryScope.Local, bool includeDisabled = false, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<DirectoryUser>> SearchUsersAsync(string? query, int? take = null, DirectoryScope scope = DirectoryScope.Local, bool includeDisabled = false, CancellationToken cancellationToken = default,
+        IDirectoryUserFilter? filter = null, DirectorySearchMode mode = DirectorySearchMode.AddressBook)
     {
         cancellationToken.ThrowIfCancellationRequested();
         DirectoryOptions options = _options.CurrentValue;
@@ -82,11 +83,11 @@ public sealed class ActiveDirectoryLookup : IDirectoryLookup
             DirectoryQuery.EnsureGlobalTerms(terms, options.GlobalSearchMinLength);
         int limit = DirectoryQuery.ClampTake(take, options.DefaultTake, options.MaxTake);
 
-        return Task.FromResult(Run(() => SearchPeople(options, terms, limit, scope, includeDisabled)));
+        return Task.FromResult(Run(() => SearchPeople(options, terms, limit, scope, includeDisabled, filter, mode)));
     }
 
     /// <inheritdoc/>
-    public Task<DirectoryUserDetail?> FindUserAsync(string id, CancellationToken cancellationToken = default)
+    public Task<DirectoryUserDetail?> FindUserAsync(string id, CancellationToken cancellationToken = default, IReadOnlyList<string>? additionalAttributes = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         DirectoryId key = DirectoryId.Parse(id, allowAccountName: true);
@@ -94,25 +95,28 @@ public sealed class ActiveDirectoryLookup : IDirectoryLookup
 
         return Task.FromResult(Run(() =>
         {
-            using ADUser? user = FindPerson(options, key);
-            return user == null ? null : new DirectoryUserDetail(ToUser(user), GroupNames(user.Groups));
+            using ADUser? user = FindPerson(options, key, additionalAttributes);
+            return user == null ? null : new DirectoryUserDetail(ToUser(user, additionalAttributes), GroupNames(user.Groups));
         }));
     }
 
-    internal DirectorySearch CreatePeopleSearch(DirectoryOptions options, IReadOnlyList<string> terms, DirectoryScope scope, bool includeDisabled)
+    internal DirectorySearch CreatePeopleSearch(DirectoryOptions options, IReadOnlyList<string> terms, DirectoryScope scope, bool includeDisabled,
+        IDirectoryUserFilter? filter = null, DirectorySearchMode mode = DirectorySearchMode.AddressBook)
     {
         string? root = Root(scope == DirectoryScope.Global ? options.UserRootGlobal : options.UserRoot);
         var search = new DirectorySearch(root, ObjectClass.User)
         {
-            AdditionalFilter = DirectoryQuery.PeopleFilter(terms, includeDisabled),
+            AdditionalFilter = DirectoryQuery.PeopleFilter(terms, includeDisabled, filter, mode),
         };
         search.PropertiesToLoad.AddRange(UserProperties);
+        if (filter is not null) search.PropertiesToLoad.AddRange(filter.AdditionalProperties.ToArray());
         return search;
     }
 
-    private IReadOnlyList<DirectoryUser> SearchPeople(DirectoryOptions options, IReadOnlyList<string> terms, int limit, DirectoryScope scope, bool includeDisabled)
+    private IReadOnlyList<DirectoryUser> SearchPeople(DirectoryOptions options, IReadOnlyList<string> terms, int limit, DirectoryScope scope, bool includeDisabled,
+        IDirectoryUserFilter? filter, DirectorySearchMode mode)
     {
-        var search = CreatePeopleSearch(options, terms, scope, includeDisabled);
+        var search = CreatePeopleSearch(options, terms, scope, includeDisabled, filter, mode);
 
         // Fetch a bounded buffer before enabled-account checks and result limiting.
         // This is not pagination: if many entries are excluded, fewer than limit may still remain.
@@ -125,7 +129,8 @@ public sealed class ActiveDirectoryLookup : IDirectoryLookup
         {
             var users = found
                 .Where(user => includeDisabled || !user.IsDisabled)
-                .Select(ToUser)
+                .Where(user => filter?.IsIncluded(user) ?? true)
+                .Select(user => ToUser(user, filter?.AdditionalProperties))
                 .OrderBy(user => user.DisplayName, NameComparer)
                 .Take(limit)
                 .ToList();
@@ -139,7 +144,7 @@ public sealed class ActiveDirectoryLookup : IDirectoryLookup
         }
     }
 
-    private ADUser? FindPerson(DirectoryOptions options, DirectoryId key)
+    private ADUser? FindPerson(DirectoryOptions options, DirectoryId key, IReadOnlyList<string>? additionalAttributes)
     {
         // A picker may be limited to one organizational unit, but resolving a saved identity must
         // also find an account that has moved outside that unit. Use the broader configured root.
@@ -149,6 +154,7 @@ public sealed class ActiveDirectoryLookup : IDirectoryLookup
         };
         search.PropertiesToLoad.AddRange(UserProperties);
         search.PropertiesToLoad.Add(ADProperties.MemberOf);
+        if (additionalAttributes is not null) search.PropertiesToLoad.AddRange(additionalAttributes.ToArray());
 
         ADUser? user = FindOne<ADUser>(search, "user lookup");
         if (user != null && key.Kind == DirectoryIdKind.AccountName
@@ -161,7 +167,7 @@ public sealed class ActiveDirectoryLookup : IDirectoryLookup
         return user;
     }
 
-    private DirectoryUser ToUser(ADUser user)
+    private DirectoryUser ToUser(ADUser user, IReadOnlyList<string>? additionalAttributes)
     {
         string userName = user.Username;
         string? domain = DomainOf(user);
@@ -183,6 +189,10 @@ public sealed class ActiveDirectoryLookup : IDirectoryLookup
             Department = NonEmpty(user.Department),
             EmployeeId = NonEmpty(user.EmployeeID),
             Enabled = !user.IsDisabled,
+            Attributes = (additionalAttributes ?? []).Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(name => (Name: name, Value: NonEmpty(user.GetProperty(name))))
+                .Where(attribute => attribute.Value is not null)
+                .ToDictionary(attribute => attribute.Name, attribute => attribute.Value!, StringComparer.OrdinalIgnoreCase),
         };
     }
 

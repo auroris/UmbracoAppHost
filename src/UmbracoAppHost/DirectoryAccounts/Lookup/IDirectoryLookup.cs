@@ -31,7 +31,10 @@ public interface IDirectoryLookup
     /// <param name="scope">The local organizational unit or the whole directory.</param>
     /// <param name="includeDisabled">Include disabled accounts.</param>
     /// <param name="cancellationToken">Cancels the request before it reaches the directory.</param>
-    Task<IReadOnlyList<DirectoryUser>> SearchUsersAsync(string? query, int? take = null, DirectoryScope scope = DirectoryScope.Local, bool includeDisabled = false, CancellationToken cancellationToken = default);
+    /// <param name="filter">A caller's trusted LDAP assertion, additional attributes and result predicate; null keeps the standard account picker.</param>
+    /// <param name="mode">AddressBook searches the standard fields; DisplayName matches every term against displayName alone.</param>
+    Task<IReadOnlyList<DirectoryUser>> SearchUsersAsync(string? query, int? take = null, DirectoryScope scope = DirectoryScope.Local, bool includeDisabled = false, CancellationToken cancellationToken = default,
+        IDirectoryUserFilter? filter = null, DirectorySearchMode mode = DirectorySearchMode.AddressBook);
 
     /// <summary>
     /// Looks up one account, regardless of its enabled state, with the
@@ -39,6 +42,7 @@ public interface IDirectoryLookup
     /// </summary>
     /// <param name="id">A SID, an objectGUID (36 characters), or <c>DOMAIN\user</c>.</param>
     /// <param name="cancellationToken">Cancels the request before it reaches the directory.</param>
+    /// <param name="additionalAttributes">Additional directory properties to return in DirectoryUser.Attributes.</param>
     /// <returns>The account, or null when there is none.</returns>
-    Task<DirectoryUserDetail?> FindUserAsync(string id, CancellationToken cancellationToken = default);
+    Task<DirectoryUserDetail?> FindUserAsync(string id, CancellationToken cancellationToken = default, IReadOnlyList<string>? additionalAttributes = null);
 }

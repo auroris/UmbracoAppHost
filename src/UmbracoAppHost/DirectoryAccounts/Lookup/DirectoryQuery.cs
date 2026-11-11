@@ -126,17 +126,20 @@ public static class DirectoryQuery
     /// </summary>
     /// <param name="terms">The search terms; each is escaped.</param>
     /// <param name="includeDisabled">Leave out the enabled-account filter.</param>
-    internal static string PeopleFilter(IReadOnlyList<string> terms, bool includeDisabled)
+    internal static string PeopleFilter(IReadOnlyList<string> terms, bool includeDisabled,
+        IDirectoryUserFilter? rules = null, DirectorySearchMode mode = DirectorySearchMode.AddressBook)
     {
         var filter = new StringBuilder("&(").Append(ADProperties.ObjectCategory).Append("=person)");
         if (!includeDisabled)
             filter.Append(EnabledUserFilter);
+        filter.Append(rules?.LdapFilter);
         // AND across words, OR across fields: "Jane Smith" can match givenName=Jane and sn=Smith.
         // OR across words instead would return everyone called Jane plus everyone called Smith.
         foreach (string term in terms)
         {
             filter.Append("(|");
-            foreach ((string attribute, MatchType match) in PeopleAttributes)
+            foreach ((string attribute, MatchType match) in mode == DirectorySearchMode.DisplayName
+                ? [(ADProperties.User.DisplayName, MatchType.Contains)] : PeopleAttributes)
                 filter.Append(Assertion(attribute, term, match));
             filter.Append(')');
         }

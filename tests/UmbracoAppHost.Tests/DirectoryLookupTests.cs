@@ -12,6 +12,28 @@ public sealed class DirectoryLookupTests
     private static ActiveDirectoryLookup Lookup() => new(new StaticOptionsMonitor(new DirectoryOptions()));
 
     [Fact]
+    public void Caller_filter_fetches_extra_attributes_and_searches_only_display_name()
+    {
+        var search = Lookup().CreatePeopleSearch(new DirectoryOptions(), ["Smith*"], DirectoryScope.Global, false, new TestFilter(), DirectorySearchMode.DisplayName);
+        Assert.Contains("extensionAttribute1", search.PropertiesToLoad);
+        Assert.Contains("(givenName=*)", search.AdditionalFilter);
+        Assert.Contains(@"(displayName=*Smith\2a*)", search.AdditionalFilter);
+        Assert.DoesNotContain("sAMAccountName", search.AdditionalFilter);
+        Assert.DoesNotContain("employeeID", search.AdditionalFilter);
+        var normal = Lookup().CreatePeopleSearch(new DirectoryOptions(), ["Smith"], DirectoryScope.Local, false);
+        Assert.DoesNotContain("(givenName=*)", normal.AdditionalFilter);
+        Assert.DoesNotContain("extensionAttribute1", normal.PropertiesToLoad);
+        Assert.Contains("sAMAccountName", normal.AdditionalFilter);
+    }
+
+    private sealed class TestFilter : IDirectoryUserFilter
+    {
+        public IReadOnlyList<string> AdditionalProperties => ["extensionAttribute1"];
+        public string LdapFilter => "(givenName=*)";
+        public bool IsIncluded(ADUser user) => true;
+    }
+
+    [Fact]
     public void Picker_search_requires_enabled_people_without_telephone_directory_rules()
     {
         var search = Lookup().CreatePeopleSearch(new DirectoryOptions(), [], DirectoryScope.Global, includeDisabled: false);

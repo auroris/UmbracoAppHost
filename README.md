@@ -444,6 +444,13 @@ set or reset them in **Users** and **Members**. OpenID sign-in does not replace 
 
 ### Creating accounts from the directory
 
+Application code can use `IDirectoryLookup.SearchUsersAsync` with a per-call `IDirectoryUserFilter`
+to request additional attributes, add a trusted LDAP assertion and filter returned accounts.
+`DirectorySearchMode.DisplayName` matches search terms against `displayName` alone; the default
+`AddressBook` mode retains the standard account-picker search. Requested extra attributes are in
+`DirectoryUser.Attributes`. A single-account `FindUserAsync` call can request them through its
+`additionalAttributes` argument. These options do not change the backoffice picker or other callers.
+
 The Users section's list of users and the Members section's list of members have an **Add from
 directory…** button beside Umbraco's own. It opens a dialog that searches the directory as you
 type, from two characters of a name, username or email, and lists the people found with their
