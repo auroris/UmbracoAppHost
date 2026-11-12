@@ -1040,9 +1040,9 @@ file plus its view in `Views/`. Publishing checks that the template's view exist
 
 ## Record attachments
 
-Files that belong to a record are kept as blobs in a database table, with their metadata, their
-revisions and the links to the records they belong to. Nothing is written to the instance folder
-or to Umbraco media, which is public by URL. The code is in `src/UmbracoAppHost/Attachments/`.
+Files that belong to a record are kept as blobs in a database table, with their metadata and the
+links to the records they belong to. A file is stored once and never replaced, and no revisions
+are kept. Nothing is written to the instance folder or to Umbraco media, which is public by URL. The code is in `src/UmbracoAppHost/Attachments/`.
 
 An **Attachments** block (`appAttachments`, in the block catalogue's **Content** group) placed in a
 form shows the files of the record the form is editing. Placed on its own, on a Web Page, it names
@@ -1054,9 +1054,9 @@ file** and **Accepted types** narrow the site's limits and never widen them, whi
 checks; **Read only** shows and downloads the files and refuses every change. The sample Orders
 form carries one, and the Website content blocks page shows the same block in the website shell.
 
-The two tables, `APP_ATTACHMENT` (file name, content type, size, SHA-256, the bytes, who
-uploaded it and when, and the revision it replaced) and `APP_ATTACHMENT_LINK` (owner alias, owner
-key, the current file, purpose, label, notes, the audit columns and the soft removal), are
+The two tables, `APP_ATTACHMENT` (file name, content type, size, SHA-256, the bytes, and who
+uploaded it and when) and `APP_ATTACHMENT_LINK` (owner alias, owner key, the file, purpose,
+label, notes, the audit columns and the soft removal), are
 created on first use in the database of the connection `Attachments:Connection` names, through
 the application database helper (`Attachments/Schema/`). SQLite and SQL Server are supported.
 The default, `AttachmentsDb`, is a SQLite file `Attachments.sqlite.db` in the instance data
@@ -1071,15 +1071,15 @@ instead, so its records and their files live in one database and one backup.
 | `AllowedExtensions` | Extensions such as `.pdf` every block is limited to. Empty, the default, allows any; a block then chooses its own. |
 | `RetentionDays` | How long a removed file stays before the purge deletes it. Default 30. |
 
-The endpoints are `/api/attachments/{page}/{block}`: `GET` lists the record's files with their
-earlier revisions, whether the caller may write, the block's purposes and limits, and the
-antiforgery token the writes carry in the `RequestVerificationToken` header; `POST` uploads a
-multipart body with the parts `file`, `purpose`, `label` and `notes` and answers 201 with the
-item; `GET /{id}` downloads the current file or an earlier revision with its stored name and type,
-`Content-Disposition: attachment`, `nosniff` and `no-store`; `PUT /{id}` replaces the current
-file with a new revision when the body has a `file` part and changes the details with the text
-parts, where an omitted part keeps a value and an empty one clears it; `DELETE /{id}` removes
-the link, which leaves the lists at once and keeps its rows for the purge. A declared length over
+The endpoints are `/api/attachments/{page}/{block}`: `GET` lists the record's files, whether the
+caller may write, the block's purposes and limits, and the antiforgery token the writes carry in
+the `RequestVerificationToken` header; `POST` uploads a multipart body with the parts `file`,
+`purpose`, `label` and `notes` and answers 201 with the item; `GET /{id}` downloads the file with
+its stored name and type, `Content-Disposition: attachment`, `nosniff` and `no-store`;
+`PATCH /{id}` with JSON `{ "fileName": "invoice.pdf" }` renames it, keeping its id and contents;
+`DELETE /{id}` removes the link, which leaves the lists at once and keeps its rows for the purge.
+There is no replacement: a new version of a document is uploaded as a new file, and the old one
+is removed if it should go. A declared length over
 the limit is refused with 413 before the body is read, and the request body is capped at the limit
 so an undeclared one is cut off; a type the block does not accept is 415.
 
@@ -1089,7 +1089,7 @@ an anonymous visitor reaches the resource too), then the owning record's resourc
 grants reading. Writing is allowed to whoever is signed in and may read, unless the resource
 implements `IAttachmentOwner` and says otherwise. An anonymous visitor writes only when the resource
 implements it and allows them. The data source engine implements it, so a data source's write
-groups write and its read groups only read. Every file and revision id
+groups write and its read groups only read. Every file id
 is looked up among the resolved owner's live links, so a readable record paired with another
 record's file is not found. A read-only block refuses writes with 403. Each operation is logged
 like a form operation, under `ApplicationAttachments`.
@@ -1098,12 +1098,12 @@ The form runtime dispatches `app-form:loaded` and `app-form:saved`, bubbling eve
 `detail.record` is the record shown, so a block inside a form follows it: a new record shows
 "Save the record before adding files", and the first save loads the list with the new key. A
 page script can listen for the same events. The block dispatches `app-attachments:changed` after
-an upload, a replacement or a removal.
+an upload, a rename or a removal.
 
 Removed files are deleted by hand: `POST /umbraco/management/api/v1/attachments/purge` with a
 backoffice token of an Administrator, and an optional body `{ "retentionDays": 30 }` that replaces
-the configured retention, deletes every link removed longer ago than that with every revision
-behind it and answers with the counts. Earlier revisions of files still in place are never purged.
+the configured retention, deletes every link removed longer ago than that with its file and
+answers with the counts.
 
 ## Tabular forms
 
@@ -1255,7 +1255,7 @@ The common host keeps SQLite data outside app/, under the instance data director
 | `data/Umbraco.sqlite.db` | Umbraco: users, members, content | Common host default; override `ConnectionStrings:umbracoDbDSN` in instance settings |
 | `data/App_Data/Reports.sqlite.db` | Saved reports and report authorization grants | the base's `Reports/InteractiveReportsSite.cs`, connection `ReportsDb` |
 | `data/ReportsSample.sqlite.db` | Sample orders for the `orders` report, the Orders data sources and the `sample.orders` resource; an instance created before AppBlocks moved application files keeps using its `data/App_Data/ReportsSample.sqlite.db` | the common host's `Sample/SampleReport.cs`, connection `ReportsSampleDb`, schema `Sample/Schema/` |
-| `data/Attachments.sqlite.db` | Record attachments: the files, their revisions and their links, unless `Attachments:Connection` names another connection | the base's `Attachments/`, connection `AttachmentsDb` |
+| `data/Attachments.sqlite.db` | Record attachments: the files and their links, unless `Attachments:Connection` names another connection | the base's `Attachments/`, connection `AttachmentsDb` |
 
 ## Application databases
 

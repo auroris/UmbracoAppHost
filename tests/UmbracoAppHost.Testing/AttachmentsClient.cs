@@ -1,9 +1,10 @@
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace UmbracoAppHost.Testing;
 
-/// <summary>The file an upload or a replacement sends: its name, its content type and its bytes.</summary>
+/// <summary>The file an upload sends: its name, its content type and its bytes.</summary>
 public sealed record AttachmentFile(string FileName, string ContentType, byte[] Content);
 
 /// <summary>
@@ -17,7 +18,7 @@ public sealed class AttachmentsClient(HttpClient client, string pathBase, Guid p
     private readonly string api = $"{pathBase}/api/attachments/{pageKey}/{blockKey}";
     private string? antiforgeryToken;
 
-    /// <summary>The record's files with their earlier revisions, whether the caller may write, and the block's purposes and limits.</summary>
+    /// <summary>The record's files, whether the caller may write, and the block's purposes and limits.</summary>
     public async Task<AttachmentsResponse> ListAsync(string? query = null)
     {
         var listed = await SendAsync(new HttpRequestMessage(HttpMethod.Get, Http.WithQuery(api, query)));
@@ -30,16 +31,20 @@ public sealed class AttachmentsClient(HttpClient client, string pathBase, Guid p
         => WriteAsync(HttpMethod.Post, api, query, file, purpose, label, notes);
 
     /// <summary>
-    /// Replaces the current file with a new revision when <paramref name="file"/> is given, and changes the details
-    /// given: null keeps a value, an empty string clears it. The answer is the item with its new current id.
+    /// Renames a file: its display and download name change, its id and contents stay. The answer is the renamed item.
+    /// A stored file is never replaced; a new version is a new upload, and the old file is removed if it should go.
     /// </summary>
-    public Task<AttachmentsResponse> ReplaceAsync(long id, AttachmentFile? file = null, string? purpose = null, string? label = null, string? notes = null, string? query = null)
-        => WriteAsync(HttpMethod.Put, Item(id), query, file, purpose, label, notes);
+    public Task<AttachmentsResponse> RenameAsync(long id, string? fileName, string? query = null)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Patch, Http.WithQuery(Item(id), query)) { Content = JsonContent.Create(new { fileName }) };
+        request.Headers.Add("RequestVerificationToken", Token());
+        return SendAsync(request);
+    }
 
-    /// <summary>Downloads the current file or an earlier revision; the response carries the stored name and type.</summary>
+    /// <summary>Downloads a file; the response carries the stored name and type.</summary>
     public Task<HttpResponseMessage> DownloadAsync(long id, string? query = null) => client.GetAsync(Http.WithQuery(Item(id), query));
 
-    /// <summary>Removes the item whose current file is <paramref name="id"/>; 204 when it was one of the record's files.</summary>
+    /// <summary>Removes the file <paramref name="id"/>; 204 when it was one of the record's files.</summary>
     public async Task<HttpResponseMessage> RemoveAsync(long id, string? query = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Delete, Http.WithQuery(Item(id), query));
@@ -89,7 +94,7 @@ public sealed record AttachmentsResponse(HttpResponseMessage Response, JsonEleme
 
     public bool CanWrite => Body.ValueKind == JsonValueKind.Object && Body.TryGetProperty("canWrite", out var value) && value.ValueKind == JsonValueKind.True;
 
-    /// <summary>The id of the item an upload or a replacement answered with.</summary>
+    /// <summary>The id of the item an upload or a rename answered with.</summary>
     public long? Id => Body.ValueKind == JsonValueKind.Object && Body.TryGetProperty("id", out var id) && id.TryGetInt64(out var value) ? value : null;
 
     /// <summary>A refusal's explanation, from the problem response's detail or title.</summary>
