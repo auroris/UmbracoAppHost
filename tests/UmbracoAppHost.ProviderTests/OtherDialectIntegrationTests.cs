@@ -88,16 +88,16 @@ public sealed class OtherDialectIntegrationTests
             Assert.Null(query.Problem);
             Assert.Equal("It's :NOT_A_BIND;", (await query.LoadAsync(created.Record.Key!, context, default)).Record!.Values["literal"]);
             Assert.Equal(404, (await source.LoadAsync(created.Record.Key!, Context("someone-else"), default)).Status);
-            var updated = await source.UpdateAsync(created.Record.Key!, Json(new { title = "Second", done = false }), created.Record.Version!, context, default);
+            var updated = await source.UpdateAsync(created.Record.Key!, Json(new { title = "Second", done = false }), created.Record.Checksum!, context, default);
             Assert.True(updated.Status == 200, JsonSerializer.Serialize(updated));
             Assert.Equal("owner", updated.Record!.Values["updatedBy"]);
-            Assert.NotEqual(created.Record.Version, updated.Record.Version);
-            Assert.Equal(409, (await source.UpdateAsync(created.Record.Key!, Json(new { title = "Stale" }), created.Record.Version!, context, default)).Status);
+            Assert.NotEqual(created.Record.Checksum, updated.Record.Checksum);
+            Assert.Equal(409, (await source.UpdateAsync(created.Record.Key!, Json(new { title = "Stale" }), created.Record.Checksum!, context, default)).Status);
             var before = await source.LoadAsync(created.Record.Key!, context, default);
             Execute(Connection, $"UPDATE {sourceName} SET \"TITLE\" = 'Outside change'");
-            Assert.Equal(409, (await source.UpdateAsync(created.Record.Key!, Json(new { title = "Stale checksum" }), before.Record!.Version!, context, default)).Status);
+            Assert.Equal(409, (await source.UpdateAsync(created.Record.Key!, Json(new { title = "Stale checksum" }), before.Record!.Checksum!, context, default)).Status);
             var fresh = await source.LoadAsync(created.Record.Key!, context, default);
-            Assert.Equal(204, (await source.DeleteAsync(created.Record.Key!, fresh.Record!.Version!, context, default)).Status);
+            Assert.Equal(204, (await source.DeleteAsync(created.Record.Key!, fresh.Record!.Checksum!, context, default)).Status);
             Assert.Equal(404, (await source.LoadAsync(created.Record.Key!, context, default)).Status);
         }
         finally
