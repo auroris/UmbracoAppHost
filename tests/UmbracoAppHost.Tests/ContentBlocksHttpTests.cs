@@ -37,11 +37,11 @@ public sealed class ContentBlocksHttpTests
                 if (context.Request.Headers.TryGetValue(NonceHeader, out var nonce)) context.Items[AppPageAssets.CspNonceItem] = nonce.ToString();
                 await next(context);
             }),
-        });
+        }, TestContext.Current.CancellationToken);
         using var scope = site.CreateScope();
         var services = scope.ServiceProvider;
         var types = services.GetRequiredService<IContentTypeService>();
-        for (var i = 0; i < 100 && types.Get(ApplicationStarter.BlockPageAlias)?.AllowedTemplates?.Any() != true; i++) await Task.Delay(100);
+        for (var i = 0; i < 100 && types.Get(ApplicationStarter.BlockPageAlias)?.AllowedTemplates?.Any() != true; i++) await Task.Delay(100, TestContext.Current.CancellationToken);
         var contents = services.GetRequiredService<IContentService>();
 
         // First boot imported the demo page, and publishing it passed the block validation.
@@ -151,7 +151,7 @@ public sealed class ContentBlocksHttpTests
         // Each shell's stylesheet styles the rich text and the placeholders.
         foreach (var stylesheet in new[] { "/dist/css/app.css", "/dist/css/site.css" })
         {
-            var css = await client.GetStringAsync(stylesheet);
+            var css = await client.GetStringAsync(stylesheet, TestContext.Current.CancellationToken);
             Assert.Contains(".ah-rich-text", css);
             Assert.Contains(".app-form-field ::placeholder", css);
         }

@@ -59,27 +59,27 @@ public sealed class FormsTests
             new(ClaimTypes.NameIdentifier, "test-member")], IdentityConstants.ApplicationScheme)), Guid.NewGuid(), Guid.NewGuid(), "1", Guid.NewGuid().ToString());
         var input = JsonSerializer.SerializeToElement(new { customer = "Test order", region = "NORTH", status = "NEW", amount = "125.34", orderDate = "2026-09-11", notes = "test" });
         var denied = context with { Member = new ClaimsPrincipal(new ClaimsIdentity([new(ClaimTypes.NameIdentifier, "editor")], "UmbracoBackOffice")) };
-        Assert.Equal(403, (await resource.CreateAsync(input, denied, default)).Status);
-        Assert.Equal(403, (await resource.LoadAsync("1", denied, default)).Status);
-        Assert.Equal(403, (await resource.UpdateAsync("1", input, "1", denied, default)).Status);
-        Assert.Equal(403, (await resource.DeleteAsync("1", "1", denied, default)).Status);
-        Assert.Equal(404, (await resource.LoadAsync("1 OR 1=1", context, default)).Status);
+        Assert.Equal(403, (await resource.CreateAsync(input, denied, TestContext.Current.CancellationToken)).Status);
+        Assert.Equal(403, (await resource.LoadAsync("1", denied, TestContext.Current.CancellationToken)).Status);
+        Assert.Equal(403, (await resource.UpdateAsync("1", input, "1", denied, TestContext.Current.CancellationToken)).Status);
+        Assert.Equal(403, (await resource.DeleteAsync("1", "1", denied, TestContext.Current.CancellationToken)).Status);
+        Assert.Equal(404, (await resource.LoadAsync("1 OR 1=1", context, TestContext.Current.CancellationToken)).Status);
         var invalid = JsonNode.Parse(input.GetRawText())!; invalid["status"] = "INVALID";
-        Assert.Equal(422, (await resource.CreateAsync(JsonSerializer.SerializeToElement(invalid), context, default)).Status);
+        Assert.Equal(422, (await resource.CreateAsync(JsonSerializer.SerializeToElement(invalid), context, TestContext.Current.CancellationToken)).Status);
         invalid["status"] = "NEW"; invalid["owner"] = "someone-else";
-        Assert.Equal(422, (await resource.CreateAsync(JsonSerializer.SerializeToElement(invalid), context, default)).Status);
-        var created = await resource.CreateAsync(input, context, default);
+        Assert.Equal(422, (await resource.CreateAsync(JsonSerializer.SerializeToElement(invalid), context, TestContext.Current.CancellationToken)).Status);
+        var created = await resource.CreateAsync(input, context, TestContext.Current.CancellationToken);
         Assert.Equal(200, created.Status); Assert.Equal("125.34", created.Record!.Values["amount"]);
-        var repeated = await resource.CreateAsync(input, context, default);
+        var repeated = await resource.CreateAsync(input, context, TestContext.Current.CancellationToken);
         Assert.Equal(created.Record.Key, repeated.Record!.Key);
         var changed = JsonNode.Parse(input.GetRawText())!; changed["notes"] = null;
-        var updated = await resource.UpdateAsync(created.Record.Key!, JsonSerializer.SerializeToElement(changed), created.Record.Checksum!, context, default);
+        var updated = await resource.UpdateAsync(created.Record.Key!, JsonSerializer.SerializeToElement(changed), created.Record.Checksum!, context, TestContext.Current.CancellationToken);
         Assert.Equal(200, updated.Status); Assert.Null(updated.Record!.Values["notes"]);
         Assert.NotEqual(created.Record.Checksum, updated.Record.Checksum);
-        Assert.Equal(409, (await resource.UpdateAsync(created.Record.Key!, input, created.Record.Checksum!, context, default)).Status);
-        Assert.Equal(409, (await resource.DeleteAsync(created.Record.Key!, created.Record.Checksum!, context, default)).Status);
-        Assert.Equal(204, (await resource.DeleteAsync(created.Record.Key!, updated.Record.Checksum!, context, default)).Status);
-        Assert.Equal(404, (await resource.CreateAsync(input, context, default)).Status); // Receipt survives deletion.
+        Assert.Equal(409, (await resource.UpdateAsync(created.Record.Key!, input, created.Record.Checksum!, context, TestContext.Current.CancellationToken)).Status);
+        Assert.Equal(409, (await resource.DeleteAsync(created.Record.Key!, created.Record.Checksum!, context, TestContext.Current.CancellationToken)).Status);
+        Assert.Equal(204, (await resource.DeleteAsync(created.Record.Key!, updated.Record.Checksum!, context, TestContext.Current.CancellationToken)).Status);
+        Assert.Equal(404, (await resource.CreateAsync(input, context, TestContext.Current.CancellationToken)).Status); // Receipt survives deletion.
     }
 
     private sealed class TestEnvironment : IWebHostEnvironment

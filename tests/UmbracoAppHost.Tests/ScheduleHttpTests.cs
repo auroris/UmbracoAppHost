@@ -25,7 +25,7 @@ public sealed class ScheduleHttpTests
     [ResetPublishedContentServices]
     public async Task The_sample_schedule_renders_in_both_shells_with_its_window_lanes_open_bars_and_legend()
     {
-        await using var site = await TestSite.StartAsync(new() { Application = typeof(Program).Assembly });
+        await using var site = await TestSite.StartAsync(new() { Application = typeof(Program).Assembly }, TestContext.Current.CancellationToken);
         await site.WaitForPublishedAsync(SchedulePage);
         await site.WaitForPublishedAsync(WebsiteSchedulePage);
         var member = site.CreateMember("schedule", "schedule@example.invalid", "Schedule member");
@@ -33,8 +33,8 @@ public sealed class ScheduleHttpTests
         // Nobody signed in: the page asks for a sign-in and shows no schedule.
         using (var anonymous = site.CreateClient())
         {
-            using var response = await anonymous.GetAsync(site.PathBase + "/orders-schedule/");
-            Assert.DoesNotContain("data-app-schedule", await response.Content.ReadAsStringAsync());
+            using var response = await anonymous.GetAsync(site.PathBase + "/orders-schedule/", TestContext.Current.CancellationToken);
+            Assert.DoesNotContain("data-app-schedule", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         }
 
         using var client = await site.SignInMemberAsync(member);
@@ -76,8 +76,8 @@ public sealed class ScheduleHttpTests
 
         // Both shells' stylesheets style the table, and the runtime mounts it.
         foreach (var stylesheet in new[] { "/dist/css/app.css", "/dist/css/site.css" })
-            Assert.Contains(".app-schedule-scroll", await client.GetStringAsync(site.PathBase + stylesheet));
-        Assert.Contains("[data-app-schedule]", await client.GetStringAsync(site.PathBase + "/App_Plugins/ApplicationBlocks/runtime.js"));
+            Assert.Contains(".app-schedule-scroll", await client.GetStringAsync(site.PathBase + stylesheet, TestContext.Current.CancellationToken));
+        Assert.Contains("[data-app-schedule]", await client.GetStringAsync(site.PathBase + "/App_Plugins/ApplicationBlocks/runtime.js", TestContext.Current.CancellationToken));
 
         // Publishing checks the sources against the catalogue: a copy whose bars come from the rows source lacks the bar columns.
         using var scope = site.CreateScope();

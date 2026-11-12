@@ -103,6 +103,15 @@ function Resolve-Build([string] $ScriptRoot, [string] $Build, [string] $Project,
     return Publish-Reference $ScriptRoot $Project $Assembly $MsBuildProperties
 }
 
+function Initialize-ViewImports([string] $RepositoryRoot, [string] $ProjectRoot) {
+    # Razor's editor needs a physical imports file before the host runs. Keep any host customizations.
+    $target = Get-SafePath $ProjectRoot 'Views/_ViewImports.cshtml'
+    if (Test-Path -LiteralPath $target) { return }
+    $source = Join-Path $RepositoryRoot 'src/UmbracoAppHost/Views/_ViewImports.cshtml'
+    [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($target)) | Out-Null
+    [IO.File]::Copy($source, $target, $false)
+}
+
 function Publish-Reference([string] $RepositoryRoot, [string] $Project, [string] $Assembly, [string[]] $MsBuildProperties) {
     if (!$Project) {
         $Project = Join-Path $RepositoryRoot $script:ReferenceProject
@@ -111,6 +120,7 @@ function Publish-Reference([string] $RepositoryRoot, [string] $Project, [string]
     $Project = (Resolve-Path -LiteralPath $Project).Path
     if (!$Assembly) { $Assembly = [IO.Path]::GetFileNameWithoutExtension($Project) + '.dll' }
     $sourceRoot = Split-Path -Parent $Project
+    Initialize-ViewImports $RepositoryRoot $sourceRoot
     $revision = 'nogit'; $dirty = $false
     try {
         $revision = (& git -C $sourceRoot rev-parse --short HEAD 2>$null) ?? 'nogit'

@@ -77,8 +77,7 @@ public sealed class AdminPasswordTests
             var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
             using (var client = new HttpClient(new HttpClientHandler { UseCookies = false }) { BaseAddress = new Uri(address) })
             {
-                using var response = await client.PostAsJsonAsync("/umbraco/management/api/v1/security/back-office/login",
-                    new { username = "admin", password = ChangedPassword });
+                using var response = await client.PostAsJsonAsync("/umbraco/management/api/v1/security/back-office/login", new { username = "admin", password = ChangedPassword }, cancellationToken: TestContext.Current.CancellationToken);
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 Assert.Contains(response.Headers.GetValues("Set-Cookie"), cookie => cookie.StartsWith("UMB_UCONTEXT="));
             }

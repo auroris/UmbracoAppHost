@@ -26,7 +26,7 @@ public sealed class AnonymousReportTests
         {
             Application = typeof(Program).Assembly,
             Settings = { ["IdentityServer:Enabled"] = "false", ["Accounts:AllowAnonymousReportBlocks"] = "true" },
-        });
+        }, TestContext.Current.CancellationToken);
         using var scope = site.CreateScope(); var services = scope.ServiceProvider;
         await site.WaitForPublishedAsync(ApplicationStarter.ReportPageKey);
         var types = services.GetRequiredService<IContentTypeService>();
@@ -57,7 +57,7 @@ public sealed class AnonymousReportTests
         Assert.False((await reports.SchemaAsync(SampleReport.ReportName)).IsSuccessStatusCode);
         // An application page's template shows anonymous visitors its sign-in layout, whatever its blocks allow.
         using (var application = await site.GetPageAsync(anonymous, "/orders-interactive/"))
-            Assert.DoesNotContain("data-app-report", await application.Content.ReadAsStringAsync());
+            Assert.DoesNotContain("data-app-report", await application.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
 
         // Public Access protects the block, its page and its endpoints alike.
         var access = services.GetRequiredService<IPublicAccessService>();
@@ -66,7 +66,7 @@ public sealed class AnonymousReportTests
         Assert.True(access.Save(entry).Success);
         Assert.False((await reports.SchemaAsync(reportName)).IsSuccessStatusCode);
         using (var protectedPage = await site.GetPageAsync(anonymous, "/anonymous-report/"))
-            Assert.DoesNotContain("data-app-report", await protectedPage.Content.ReadAsStringAsync());
+            Assert.DoesNotContain("data-app-report", await protectedPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         access.Delete(entry);
         Assert.Equal(25, (await reports.RowsAsync(reportName)).GetArrayLength());
 

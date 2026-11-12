@@ -56,13 +56,13 @@ public sealed class AnonymousHostingTests
                 builder.Services.AddSingleton<IServerIntegratedAuth>(new WindowsServer());
                 builder.Services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, NativeWindowsHandler>("TestWindows", _ => { });
             },
-        });
+        }, TestContext.Current.CancellationToken);
         using var browser = site.CreateClient();
         using var response = await browser.GetAsync("/connect/authorize" + QueryString.Create(new Dictionary<string, string?>
         {
             ["client_id"] = ClientId, ["redirect_uri"] = RedirectUri, ["response_type"] = "code", ["scope"] = "openid",
             ["state"] = "native-windows", ["code_challenge"] = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM", ["code_challenge_method"] = "S256",
-        }));
+        }), TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         var returned = QueryHelpers.ParseQuery(response.Headers.Location!.Query);
         Assert.False(returned.ContainsKey("error"), response.Headers.Location.ToString());
@@ -103,17 +103,17 @@ public sealed class AnonymousHostingTests
                     return Results.Json(new { Automatic = visitor.AutomaticProvider?.Suffix, Providers = visitor.Providers.Count, Start = visitor.ShouldStartMemberSignIn(false, false) });
                 });
             },
-        });
+        }, TestContext.Current.CancellationToken);
         using var browser = site.CreateClient();
 
         // Every request runs the authentication middleware; none may fail because of the Negotiate handler.
-        using (var login = await browser.GetAsync("/umbraco/login"))
+        using (var login = await browser.GetAsync("/umbraco/login", TestContext.Current.CancellationToken))
         {
-            var html = await login.Content.ReadAsStringAsync();
+            var html = await login.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
             Assert.True(login.IsSuccessStatusCode, html);
             Assert.Contains("<umb-auth", html, StringComparison.OrdinalIgnoreCase);
         }
-        var negotiate = await browser.GetFromJsonAsync<JsonElement>("/__tests/negotiate");
+        var negotiate = await browser.GetFromJsonAsync<JsonElement>("/__tests/negotiate", cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(negotiate.GetProperty("succeeded").GetBoolean());
         Assert.Contains("Windows authentication", negotiate.GetProperty("failure").GetString());
 
@@ -122,7 +122,7 @@ public sealed class AnonymousHostingTests
         {
             ["client_id"] = ClientId, ["redirect_uri"] = RedirectUri, ["response_type"] = "code", ["scope"] = "openid",
             ["state"] = "state-1", ["nonce"] = "nonce-1", ["code_challenge"] = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM", ["code_challenge_method"] = "S256",
-        })))
+        }), TestContext.Current.CancellationToken))
         {
             Assert.Equal(HttpStatusCode.Redirect, authorize.StatusCode);
             Assert.StartsWith(RedirectUri + "?", authorize.Headers.Location!.ToString());
@@ -139,7 +139,7 @@ public sealed class AnonymousHostingTests
         Assert.Empty(catalog.BackOfficeLogins);
         Assert.Empty(catalog.MemberLogins);
         Assert.Empty(await site.Services.GetServices<IPackageManifestReader>().OfType<SsoPackageManifestReader>().Single().ReadPackageManifestsAsync());
-        var member = await browser.GetFromJsonAsync<JsonElement>("/__tests/member-signin");
+        var member = await browser.GetFromJsonAsync<JsonElement>("/__tests/member-signin", cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(JsonValueKind.Null, member.GetProperty("automatic").ValueKind);
         Assert.Equal(0, member.GetProperty("providers").GetInt32());
         Assert.False(member.GetProperty("start").GetBoolean());
@@ -165,7 +165,7 @@ public sealed class AnonymousHostingTests
         Assert.Equal(["Domain"], catalog.All.Select(provider => provider.Suffix));
 
         Assert.Empty(new SsoProviderCatalog(embedded, anonymous).BackOfficeLogins);
-        Assert.Equal(1, new SsoProviderCatalog(embedded, new WindowsAuthenticationAvailability([])).BackOfficeLogins.Count());
+        Assert.Single(new SsoProviderCatalog(embedded, new WindowsAuthenticationAvailability([])).BackOfficeLogins);
         Assert.Single(new SsoProviderCatalog(embedded).BackOfficeLogins);
     }
 

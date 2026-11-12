@@ -96,7 +96,10 @@ checkout and run the scripts inside it.
 `-Project <project file>` publishes another web project that references the library instead of
 `src/UmbracoAppHost.Web`: a downstream host, as [Getting started](getting-started.md#use-the-library-in-another-repository)
 describes. `-Assembly <file>` names its application when that is not the project's name with
-`.dll`. `-MsBuildProperties` passes MSBuild properties to `dotnet publish`, for example
+`.dll`. Before publishing, the scripts copy the library's complete `Views/_ViewImports.cshtml`
+into the source project if it is missing, so Visual Studio can resolve the shared Razor types
+and injected services. Commit this file with the host; existing imports are preserved.
+`-MsBuildProperties` passes MSBuild properties to `dotnet publish`, for example
 `-MsBuildProperties '-p:InteractiveReportsRoot=D:\src\Interactive-Reports'` when the sibling
 checkouts are elsewhere; they come after the script's own, so `-p:Configuration=Debug` replaces
 the Release configuration. The three apply only when the script publishes, not with `-Build` or

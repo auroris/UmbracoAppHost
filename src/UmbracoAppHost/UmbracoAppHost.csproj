@@ -90,29 +90,27 @@
        pins them here. A difference would quietly compile AppBlocks against one version and run it on another, so it
        stops the build. The check lives only here, because AppBlocks must not need this repository. -->
   <Target Name="CheckAppBlocksPackageVersions" BeforeTargets="CollectPackageReferences;ResolveProjectReferences"
-          Condition="Exists('$(AppBlocksRoot)\Directory.Build.props') and '$(DesignTimeBuild)' != 'true'">
-    <XmlPeek XmlInputPath="$(AppBlocksRoot)\Directory.Build.props" Query="/Project/PropertyGroup/AppBlocksUmbracoVersion/text()">
-      <Output TaskParameter="Result" PropertyName="_AppBlocksUmbracoVersion" />
-    </XmlPeek>
+          Condition="Exists('$(AppBlocksRoot)\src\AppBlocks\AppBlocks.csproj') and '$(DesignTimeBuild)' != 'true'">
     <ItemGroup>
       <_AppBlocksProject Include="$(AppBlocksRoot)\src\AppBlocks\AppBlocks.csproj;$(AppBlocksRoot)\src\AppBlocks.Documents\AppBlocks.Documents.csproj;$(AppBlocksRoot)\src\AppBlocks.InteractiveReports\AppBlocks.InteractiveReports.csproj" />
     </ItemGroup>
-    <XmlPeek XmlInputPath="%(_AppBlocksProject.Identity)" Query="/Project/ItemGroup/PackageReference[@Include='Microsoft.Data.Sqlite']/@Version">
-      <Output TaskParameter="Result" ItemName="_AppBlocksSqliteVersion" />
-    </XmlPeek>
-    <XmlPeek XmlInputPath="%(_AppBlocksProject.Identity)" Query="/Project/ItemGroup/PackageReference[@Include='Microsoft.Extensions.FileProviders.Embedded']/@Version">
-      <Output TaskParameter="Result" ItemName="_AppBlocksEmbeddedVersion" />
-    </XmlPeek>
+    <!-- Read the evaluated references that NuGet uses, whether a version is literal or comes from a property.
+         AppBlocksUmbracoVersion in Directory.Build.props may no longer be used by those references. -->
+    <MSBuild Projects="@(_AppBlocksProject)" Targets="CollectPackageReferences"
+             Properties="Configuration=$(Configuration)" RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained">
+      <Output TaskParameter="TargetOutputs" ItemName="_AppBlocksPackageReference" />
+    </MSBuild>
     <PropertyGroup>
       <_AppHostUmbracoVersion>@(PackageVersion->WithMetadataValue('Identity', 'Umbraco.Cms')->Metadata('Version'))</_AppHostUmbracoVersion>
       <_AppHostDevelopmentModeVersion>@(PackageVersion->WithMetadataValue('Identity', 'Umbraco.Cms.DevelopmentMode.Backoffice')->Metadata('Version'))</_AppHostDevelopmentModeVersion>
       <_AppHostSqliteVersion>@(PackageVersion->WithMetadataValue('Identity', 'Microsoft.Data.Sqlite')->Metadata('Version'))</_AppHostSqliteVersion>
       <_AppHostEmbeddedVersion>@(PackageVersion->WithMetadataValue('Identity', 'Microsoft.Extensions.FileProviders.Embedded')->Metadata('Version'))</_AppHostEmbeddedVersion>
-      <_AppBlocksSqliteVersions>@(_AppBlocksSqliteVersion->Distinct())</_AppBlocksSqliteVersions>
-      <_AppBlocksEmbeddedVersions>@(_AppBlocksEmbeddedVersion->Distinct())</_AppBlocksEmbeddedVersions>
+      <_AppBlocksUmbracoVersions>@(_AppBlocksPackageReference->WithMetadataValue('Identity', 'Umbraco.Cms')->Metadata('Version')->Distinct())</_AppBlocksUmbracoVersions>
+      <_AppBlocksSqliteVersions>@(_AppBlocksPackageReference->WithMetadataValue('Identity', 'Microsoft.Data.Sqlite')->Metadata('Version')->Distinct())</_AppBlocksSqliteVersions>
+      <_AppBlocksEmbeddedVersions>@(_AppBlocksPackageReference->WithMetadataValue('Identity', 'Microsoft.Extensions.FileProviders.Embedded')->Metadata('Version')->Distinct())</_AppBlocksEmbeddedVersions>
     </PropertyGroup>
-    <Error Condition="'$(_AppBlocksUmbracoVersion)' != '$(_AppHostUmbracoVersion)'"
-           Text="Umbraco.Cms is $(_AppHostUmbracoVersion) in UmbracoAppHost's Directory.Packages.props but '$(_AppBlocksUmbracoVersion)' as AppBlocksUmbracoVersion in $(AppBlocksRoot)\Directory.Build.props. Change both together." />
+    <Error Condition="'$(_AppBlocksUmbracoVersions)' != '$(_AppHostUmbracoVersion)'"
+           Text="Umbraco.Cms is $(_AppHostUmbracoVersion) in UmbracoAppHost's Directory.Packages.props but '$(_AppBlocksUmbracoVersions)' in the AppBlocks projects under $(AppBlocksRoot)\src. Change both together." />
     <Error Condition="'$(_AppHostDevelopmentModeVersion)' != '$(_AppHostUmbracoVersion)'"
            Text="Umbraco.Cms.DevelopmentMode.Backoffice is $(_AppHostDevelopmentModeVersion) but Umbraco.Cms is $(_AppHostUmbracoVersion) in UmbracoAppHost's Directory.Packages.props. Change both together." />
     <!-- AppBlocks stopped pinning Microsoft.Data.Sqlite on 2026-11-01 (it comes with Umbraco.Cms); the check applies only while a project still pins it. -->

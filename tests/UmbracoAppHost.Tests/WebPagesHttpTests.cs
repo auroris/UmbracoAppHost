@@ -40,7 +40,7 @@ public sealed class WebPagesHttpTests
                     await next(context);
                 });
             },
-        });
+        }, TestContext.Current.CancellationToken);
         responses = Directory.CreateDirectory(Path.Combine(host.Root, "responses")).FullName;
         using var scope = host.CreateScope();
         var services = scope.ServiceProvider;
@@ -128,7 +128,7 @@ public sealed class WebPagesHttpTests
         var address = host.Address;
         using var anonymous = Client(address, "en.website.test");
         using var administrator = Client(address, "en.website.test", useCookies: false);
-        var signIn = await administrator.GetAsync($"/__tests/login/{Constants.Security.SuperUserKey}?scheme=backoffice&name={Uri.EscapeDataString(AdministratorName)}");
+        var signIn = await administrator.GetAsync($"/__tests/login/{Constants.Security.SuperUserKey}?scheme=backoffice&name={Uri.EscapeDataString(AdministratorName)}", TestContext.Current.CancellationToken);
         signIn.EnsureSuccessStatusCode();
         // Like the existing block HTTP tests, carry the issued backoffice cookie explicitly instead of
         // relying on cookie-container policy for a loopback HTTP endpoint with a simulated site hostname.
@@ -178,11 +178,11 @@ public sealed class WebPagesHttpTests
         var formKeys = WebPageTestContent.Blocks(english, "appForm").Select(block => Guid.Parse(block["key"]!.GetValue<string>())).ToArray();
         var reportKey = Guid.Parse(WebPageTestContent.Blocks(english, "appReport").Single()["key"]!.GetValue<string>());
         var reportUrl = "/api/reports/" + ReportBlocks.Name(mixed.Key, reportKey) + "/default";
-        Assert.False((await anonymous.GetAsync(reportUrl + "?appCulture=en")).IsSuccessStatusCode);
+        Assert.False((await anonymous.GetAsync(reportUrl + "?appCulture=en", TestContext.Current.CancellationToken)).IsSuccessStatusCode);
         foreach (var formKey in formKeys)
         {
             var formUrl = $"/api/forms/{mixed.Key}/{formKey}?appCulture=en&id=4&otherOrder=5";
-            Assert.Equal(HttpStatusCode.Forbidden, (await anonymous.GetAsync(formUrl)).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await anonymous.GetAsync(formUrl, TestContext.Current.CancellationToken)).StatusCode);
             var loaded = await Json(administrator, formUrl);
             Assert.Equal(formKey == formKeys[0] ? "4" : "5", loaded.GetProperty("record").GetProperty("key").GetString());
         }
@@ -198,7 +198,7 @@ public sealed class WebPagesHttpTests
         var loadedFrench = await Json(administrator, formBase + "?appCulture=fr&commande=5");
         Assert.Equal("5", loadedFrench.GetProperty("record").GetProperty("key").GetString());
         Assert.NotEqual(loadedEnglish.GetProperty("definitionVersion").GetString(), loadedFrench.GetProperty("definitionVersion").GetString());
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await administrator.GetAsync(formBase + "?appCulture=de")).StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await administrator.GetAsync(formBase + "?appCulture=de", TestContext.Current.CancellationToken)).StatusCode);
         administrator.DefaultRequestHeaders.Host = "fr.website.test";
         var frenchPage = await Page(administrator, "/mixed-content/");
         Assert.Contains("?appCulture=fr", frenchPage.Html);
@@ -234,8 +234,8 @@ public sealed class WebPagesHttpTests
         var referenceProtection = new PublicAccessEntry(privateReference, login, deniedPage, [new PublicAccessRule { RuleType = Constants.Conventions.PublicAccess.MemberUsernameRuleType, RuleValue = member.Username }]);
         Assert.True(access.Save(referenceProtection).Success);
         // Public Access admits a backoffice user who may edit the page, including the administrator.
-        var administratorResponse = await administrator.GetAsync("/private-tools/private-guide/");
-        var administratorGuide = await administratorResponse.Content.ReadAsStringAsync();
+        var administratorResponse = await administrator.GetAsync("/private-tools/private-guide/", TestContext.Current.CancellationToken);
+        var administratorGuide = await administratorResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         AssertNoStore(administratorResponse);
         if (administratorResponse.Headers.Location is { } administratorRedirect) administratorGuide = (await Page(administrator, administratorRedirect.ToString())).Html;
         Assert.Contains("private-guide-marker", administratorGuide);
@@ -251,11 +251,11 @@ public sealed class WebPagesHttpTests
         websiteEditor.AddGroup((await groups.GetAsync(Constants.Security.EditorGroupKey))!.ToReadOnlyGroup());
         users.Save(websiteEditor);
         using var editor = Client(address, "en.website.test", useCookies: false);
-        var editorSignIn = await editor.GetAsync($"/__tests/login/{websiteEditor.Key}?scheme=backoffice&name={Uri.EscapeDataString(AdministratorName)}");
+        var editorSignIn = await editor.GetAsync($"/__tests/login/{websiteEditor.Key}?scheme=backoffice&name={Uri.EscapeDataString(AdministratorName)}", TestContext.Current.CancellationToken);
         editorSignIn.EnsureSuccessStatusCode();
         editor.DefaultRequestHeaders.Add("Cookie", Cookies(editorSignIn));
-        var editorResponse = await editor.GetAsync("/private-tools/private-guide/");
-        var editorHtml = await editorResponse.Content.ReadAsStringAsync();
+        var editorResponse = await editor.GetAsync("/private-tools/private-guide/", TestContext.Current.CancellationToken);
+        var editorHtml = await editorResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         if (editorResponse.Headers.Location is { } editorRedirect) editorHtml = (await Page(editor, editorRedirect.ToString())).Html;
         Assert.Contains("private-guide-marker", editorHtml);
         Assert.DoesNotContain("public-login-marker", editorHtml);
@@ -265,9 +265,9 @@ public sealed class WebPagesHttpTests
         Assert.Contains("public-login-marker", referenceSignIn.Html);
         Assert.DoesNotContain("private-reference-marker", referenceSignIn.Html);
         AssertNoStore(referenceSignIn.Response);
-        var protectedResponse = await anonymous.GetAsync("/private-tools/private-guide/");
+        var protectedResponse = await anonymous.GetAsync("/private-tools/private-guide/", TestContext.Current.CancellationToken);
         AssertNoStore(protectedResponse);
-        var protectedHtml = await protectedResponse.Content.ReadAsStringAsync();
+        var protectedHtml = await protectedResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         if (protectedResponse.Headers.Location is { } redirect) protectedHtml = (await Page(anonymous, redirect.ToString())).Html;
         Assert.DoesNotContain("private-guide-marker", protectedHtml);
         Assert.Contains("public-login-marker", protectedHtml);
@@ -278,7 +278,7 @@ public sealed class WebPagesHttpTests
         var loginForm = ReadLogin(protectedHtml);
         loginForm.Fields["loginModel.Username"] = member.Username;
         loginForm.Fields["loginModel.Password"] = password;
-        var memberSignIn = await anonymous.PostAsync(loginForm.Action, new FormUrlEncodedContent(loginForm.Fields));
+        var memberSignIn = await anonymous.PostAsync(loginForm.Action, new FormUrlEncodedContent(loginForm.Fields), TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, memberSignIn.StatusCode);
         Assert.Equal("/private-tools/private-guide/", memberSignIn.Headers.Location?.OriginalString);
         Assert.Contains("private-guide-marker", (await Page(anonymous, "/private-tools/private-guide/")).Html);

@@ -13,7 +13,7 @@ public sealed class TestSiteSnapshotTests
     public async Task Sites_share_an_install_but_not_what_a_test_changes()
     {
         string root;
-        await using (var first = await TestSite.StartAsync(new TestSiteOptions { Application = typeof(Program).Assembly }))
+        await using (var first = await TestSite.StartAsync(new TestSiteOptions { Application = typeof(Program).Assembly }, TestContext.Current.CancellationToken))
         {
             root = first.Root;
             first.CreateMember("only-in-the-first", "only-in-the-first@example.invalid", "Only in the first site");
@@ -22,7 +22,7 @@ public sealed class TestSiteSnapshotTests
             Assert.True(scope.ServiceProvider.GetRequiredService<IContentService>().GetById(ApplicationStarter.FormPageKey)!.Published);
         }
 
-        await using var second = await TestSite.StartAsync(new TestSiteOptions { Application = typeof(Program).Assembly });
+        await using var second = await TestSite.StartAsync(new TestSiteOptions { Application = typeof(Program).Assembly }, TestContext.Current.CancellationToken);
         Assert.NotEqual(root, second.Root);
         using var secondScope = second.CreateScope();
         Assert.Null(secondScope.ServiceProvider.GetRequiredService<IMemberService>().GetByUsername("only-in-the-first"));
@@ -33,7 +33,7 @@ public sealed class TestSiteSnapshotTests
     [ResetPublishedContentServices]
     public async Task A_site_can_still_run_first_boot_itself()
     {
-        await using var site = await TestSite.StartAsync(new TestSiteOptions { Application = typeof(Program).Assembly, UseInstallSnapshot = false });
+        await using var site = await TestSite.StartAsync(new TestSiteOptions { Application = typeof(Program).Assembly, UseInstallSnapshot = false }, TestContext.Current.CancellationToken);
         await site.WaitForPublishedAsync(ApplicationStarter.FormPageKey, TimeSpan.FromMinutes(2));
     }
 }

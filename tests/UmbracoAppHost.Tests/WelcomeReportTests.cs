@@ -29,7 +29,7 @@ public sealed class WelcomeReportTests
             VirtualPath = prefix,
             // This report fixture creates and counts its own content tree.
             FirstBootGroup = "Settings",
-        });
+        }, TestContext.Current.CancellationToken);
         using var scope = site.CreateScope();
         var services = scope.ServiceProvider;
         var content = services.GetRequiredService<IContentService>();
@@ -80,12 +80,12 @@ public sealed class WelcomeReportTests
         // Each browser carries one identity: anonymous, a member, then a backoffice user.
         var api = site.PathBase + InteractiveReportsSite.BackOfficeReportsRoute + "/" + RecentPagesReport.Name;
         using (var anonymous = site.CreateClient())
-            Assert.False((await anonymous.GetAsync(api + "/default")).IsSuccessStatusCode);
+            Assert.False((await anonymous.GetAsync(api + "/default", TestContext.Current.CancellationToken)).IsSuccessStatusCode);
         using (var member = await site.SignInMemberAsync(editor.Id, "Report test"))
         {
-            Assert.False((await member.GetAsync(api + "/default")).IsSuccessStatusCode);
+            Assert.False((await member.GetAsync(api + "/default", TestContext.Current.CancellationToken)).IsSuccessStatusCode);
             // Interactive Reports conceals definitions that the caller is not authorized to view.
-            Assert.Equal(HttpStatusCode.NotFound, (await member.GetAsync(site.PathBase + "/api/reports/" + RecentPagesReport.Name + "/default")).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, (await member.GetAsync(site.PathBase + "/api/reports/" + RecentPagesReport.Name + "/default", TestContext.Current.CancellationToken)).StatusCode);
         }
         using var administrator = await SignIn("backoffice", Constants.Security.SuperUserKey.ToString());
         var client = administrator;
@@ -133,11 +133,11 @@ public sealed class WelcomeReportTests
         state["search"] = "Latest draft";
         Assert.Single((await Query(state))["rows"]!.AsArray());
         // A website member signed in beside the backoffice user does not change what the backoffice report shows.
-        (await client.GetAsync($"{site.PathBase}/__tests/login/different-website-member?scheme=member&name=Report%20test")).EnsureSuccessStatusCode();
+        (await client.GetAsync($"{site.PathBase}/__tests/login/different-website-member?scheme=member&name=Report%20test", TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
         Assert.Single((await Query(state))["rows"]!.AsArray());
         state["search"] = null;
-        var download = await client.PostAsJsonAsync(site.PathBase + InteractiveReportsSite.BackOfficeDownloadRoute + "/" + RecentPagesReport.Name + "/csv", state);
-        var csv = await download.Content.ReadAsStringAsync();
+        var download = await client.PostAsJsonAsync(site.PathBase + InteractiveReportsSite.BackOfficeDownloadRoute + "/" + RecentPagesReport.Name + "/csv", state, cancellationToken: TestContext.Current.CancellationToken);
+        var csv = await download.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.True(download.IsSuccessStatusCode, csv);
         Assert.Contains("Latest draft", csv);
         Assert.DoesNotContain("Outside editor start node", csv);

@@ -165,6 +165,7 @@ MyHost\
     appsettings.json          InstanceRoot, UmbracoAppHost:Samples, the host's settings
     uSync\                    the host's committed export: its content, dictionary keys and templates
     Views\                    the host's own templates, beside the copies of the library's views
+      _ViewImports.cshtml     the library's complete imports, copied when creating the project
     Schema\sqlite\, Schema\sqlserver\   the host's tables, when it has a database of its own
   instance\                   git-ignored: instance.json, data\, media\ and the working uSync\ folder
 ```
@@ -194,6 +195,20 @@ backoffice, and published as files. In Visual Studio, add the library to the hos
 **Add > Existing Project** so that it builds with the host. The library's own dependencies,
 Interactive Reports, the IdentityServer directory libraries and the Pressroom client, build
 through its project references and are not added.
+
+Create `Views/_ViewImports.cshtml` when setting up the project and commit it with the host.
+Copy the complete file from `src/UmbracoAppHost/Views/_ViewImports.cshtml` in this checkout,
+including its `@inject` declarations. From the new host repository, with sibling checkouts:
+
+```powershell
+New-Item -ItemType Directory -Force src/MyHost.Web/Views | Out-Null
+Copy-Item ../UmbracoAppHost/src/UmbracoAppHost/Views/_ViewImports.cshtml src/MyHost.Web/Views/_ViewImports.cshtml
+```
+
+This gives Visual Studio the shared namespaces (including `UmbracoViewPage`) and injected
+services before the first run. The embedded runtime imports are not visible to the Razor editor.
+`new-site.ps1 -Project` also creates this source file before publishing if it is missing; existing
+imports are preserved so the host can add its own directives.
 
 `Program.cs` is the reference launcher's:
 

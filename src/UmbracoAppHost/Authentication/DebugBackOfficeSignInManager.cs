@@ -60,7 +60,7 @@ public sealed class DebugBackOfficeSignInManager(
         // Native SignInAsync also updates the account's security stamp. Recovery leaves that
         // intact while retaining the cookie handler's native login session.
         await Context.SignInAsync(AuthenticationType, principal, new AuthenticationProperties { IsPersistent = isPersistent });
-        userManager.NotifyLoginSuccess(Context.User, user.Id);
+        ((BackOfficeUserManager)UserManager).NotifyLoginSuccess(Context.User, user.Id);
         Logger.LogWarning("Debug recovery sign-in for backoffice user {UserId}.", user.Id);
         return SignInResult.Success;
     }

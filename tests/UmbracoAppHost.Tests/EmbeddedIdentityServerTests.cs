@@ -61,8 +61,8 @@ public sealed class EmbeddedIdentityServerTests
         });
         using var anonymous = site.CreateClient();
         var url = AuthorizationUrl(prefix + "/connect/authorize", ClientId, RedirectUri, "openid");
-        using var challenge = await anonymous.GetAsync(url);
-        var body = await challenge.Content.ReadAsStringAsync();
+        using var challenge = await anonymous.GetAsync(url, TestContext.Current.CancellationToken);
+        var body = await challenge.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Unauthorized, challenge.StatusCode);
         Assert.Contains(challenge.Headers.WwwAuthenticate, header => header.Scheme == NegotiateDefaults.AuthenticationScheme);
         Assert.True(challenge.Headers.CacheControl?.NoStore);
@@ -75,13 +75,13 @@ public sealed class EmbeddedIdentityServerTests
         Assert.Equal("1", localQuery[SsoLoginUrls.LocalParameter].ToString());
         Assert.Equal("state-1", localQuery["state"].ToString());
         Assert.Equal(RedirectUri, localQuery["redirect_uri"].ToString());
-        using (var refused = await anonymous.GetAsync(local)) AssertRefused(refused);
+        using (var refused = await anonymous.GetAsync(local, TestContext.Current.CancellationToken)) AssertRefused(refused);
 
         // A broken Negotiate handshake occurs before MVC. It must still run OpenIddict's
         // validation and return an authorization error through the registered callback.
         using var broken = new HttpRequestMessage(HttpMethod.Get, url);
         broken.Headers.Authorization = new AuthenticationHeaderValue(NegotiateDefaults.AuthenticationScheme, "invalid-token");
-        using (var refused = await anonymous.SendAsync(broken)) AssertRefused(refused);
+        using (var refused = await anonymous.SendAsync(broken, TestContext.Current.CancellationToken)) AssertRefused(refused);
 
         foreach (var invalid in new[]
         {
@@ -91,7 +91,7 @@ public sealed class EmbeddedIdentityServerTests
             AuthorizationUrl(prefix + "/connect/authorize", "umbraco-backoffice", Address(site) + prefix + "/some-other-callback", "openid"),
         })
         {
-            using var response = await anonymous.GetAsync(QueryHelpers.AddQueryString(invalid, SsoLoginUrls.LocalParameter, "1"));
+            using var response = await anonymous.GetAsync(QueryHelpers.AddQueryString(invalid, SsoLoginUrls.LocalParameter, "1"), TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             Assert.Null(response.Headers.Location);
         }
@@ -103,16 +103,16 @@ public sealed class EmbeddedIdentityServerTests
         using var ownRequest = new HttpRequestMessage(HttpMethod.Get, QueryHelpers.AddQueryString(
             AuthorizationUrl(prefix + "/connect/authorize", "umbraco-backoffice", ownCallback, "openid"), SsoLoginUrls.LocalParameter, "1"));
         ownRequest.Headers.Host = host;
-        using var ownResponse = await anonymous.SendAsync(ownRequest);
+        using var ownResponse = await anonymous.SendAsync(ownRequest, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, ownResponse.StatusCode);
         Assert.Equal("access_denied", QueryHelpers.ParseQuery(ownResponse.Headers.Location!.Query)["error"].ToString());
 
         var withoutPkce = QueryHelpers.ParseQuery(new Uri(site.Address, url).Query)
             .Where(parameter => !parameter.Key.StartsWith("code_challenge", StringComparison.Ordinal))
             .ToDictionary(parameter => parameter.Key, parameter => (string?)parameter.Value.ToString());
-        using var missingPkce = await anonymous.GetAsync(prefix + "/connect/authorize" + QueryString.Create(withoutPkce));
+        using var missingPkce = await anonymous.GetAsync(prefix + "/connect/authorize" + QueryString.Create(withoutPkce), TestContext.Current.CancellationToken);
         Assert.NotEqual(HttpStatusCode.Unauthorized, missingPkce.StatusCode);
-        var pkceError = missingPkce.Headers.Location?.Query ?? await missingPkce.Content.ReadAsStringAsync();
+        var pkceError = missingPkce.Headers.Location?.Query ?? await missingPkce.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains("invalid_request", pkceError);
 
         // Other Negotiate consumers retain native failure handling.
@@ -165,7 +165,7 @@ public sealed class EmbeddedIdentityServerTests
             Assert.Contains("profile", scopes);
             Assert.Contains("roles", scopes);
             Assert.Contains(ClaimTypes.WindowsAccountName, discovery.GetProperty("claims_supported").EnumerateArray().Select(claim => claim.GetString()));
-            var jwks = await anonymous.GetStringAsync(discovery.GetProperty("jwks_uri").GetString());
+            var jwks = await anonymous.GetStringAsync(discovery.GetProperty("jwks_uri").GetString(), TestContext.Current.CancellationToken);
             Assert.Contains(new JsonWebKeySet(jwks).Keys, key => key.Kid == keyId);
 
                 using var windows = WindowsClient(address, out _);
@@ -178,16 +178,16 @@ public sealed class EmbeddedIdentityServerTests
                 {
                     ["grant_type"] = "authorization_code", ["code"] = code, ["redirect_uri"] = RedirectUri,
                     ["client_id"] = ClientId, ["client_secret"] = secret, ["code_verifier"] = verifier,
-                }));
+                }), TestContext.Current.CancellationToken);
                 Assert.False(rejected.IsSuccessStatusCode);
-                Assert.Equal("invalid_client", JsonDocument.Parse(await rejected.Content.ReadAsStringAsync()).RootElement.GetProperty("error").GetString());
+                Assert.Equal("invalid_client", JsonDocument.Parse(await rejected.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).RootElement.GetProperty("error").GetString());
             }
             using var tokenResponse = await anonymous.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["grant_type"] = "authorization_code", ["code"] = code, ["redirect_uri"] = RedirectUri,
                 ["client_id"] = ClientId, ["client_secret"] = ClientSecret, ["code_verifier"] = verifier,
-            }));
-            var tokenJson = await tokenResponse.Content.ReadAsStringAsync();
+            }), TestContext.Current.CancellationToken);
+            var tokenJson = await tokenResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
             Assert.True(tokenResponse.IsSuccessStatusCode, tokenJson);
             var tokens = JsonDocument.Parse(tokenJson).RootElement;
             idToken = tokens.GetProperty("id_token").GetString()!;
@@ -235,7 +235,7 @@ public sealed class EmbeddedIdentityServerTests
             using (var scope = site.CreateScope())
             {
                 var applications = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
-                Assert.Null(await applications.FindByClientIdAsync(ClientId));
+                Assert.Null(await applications.FindByClientIdAsync(ClientId, TestContext.Current.CancellationToken));
                 await applications.CreateAsync(new OpenIddictApplicationDescriptor
                 {
                     ClientId = ClientId,
@@ -249,7 +249,7 @@ public sealed class EmbeddedIdentityServerTests
                         OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
                         OpenIddictConstants.Permissions.ResponseTypes.Code,
                     },
-                });
+                }, TestContext.Current.CancellationToken);
             }
             var (legacyStatus, _, legacyBody) = await AuthorizeResponseAsync(windows,
                 "/umbraco/management/api/v1/security/back-office/authorize", ClientId, RedirectUri, "openid");
@@ -259,7 +259,7 @@ public sealed class EmbeddedIdentityServerTests
             // Access tokens issued here are for other applications, never for Umbraco's APIs.
             using var api = new HttpRequestMessage(HttpMethod.Get, "/umbraco/management/api/v1/user/current");
             api.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            using var apiResponse = await anonymous.SendAsync(api);
+            using var apiResponse = await anonymous.SendAsync(api, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Unauthorized, apiResponse.StatusCode);
             Assert.Contains("invalid_token", apiResponse.Headers.WwwAuthenticate.ToString());
         }
@@ -269,7 +269,7 @@ public sealed class EmbeddedIdentityServerTests
         {
             Assert.Equal(keyId, site.Services.GetRequiredService<EmbeddedIdentityServerHost>().ServerOptions.SigningCredentials[0].Key.KeyId);
             using var anonymous = site.CreateClient();
-            var jwks = new JsonWebKeySet(await anonymous.GetStringAsync("/.well-known/jwks"));
+            var jwks = new JsonWebKeySet(await anonymous.GetStringAsync("/.well-known/jwks", TestContext.Current.CancellationToken));
             Assert.Contains(jwks.Keys, key => key.Kid == keyId);
             var validated = await new JsonWebTokenHandler().ValidateTokenAsync(idToken, new TokenValidationParameters
             {
@@ -294,7 +294,7 @@ public sealed class EmbeddedIdentityServerTests
         for (var attempt = 0; attempt < 100 && userKey is null; attempt++)
         {
             userKey = site.Services.GetRequiredService<IUserService>().GetByEmail(email)?.Key;
-            if (userKey is null) await Task.Delay(100);
+            if (userKey is null) await Task.Delay(100, TestContext.Current.CancellationToken);
         }
         Assert.NotNull(userKey);
 
@@ -321,9 +321,9 @@ public sealed class EmbeddedIdentityServerTests
         {
             visited.Add(location.ToString());
             response?.Dispose();
-            response = await browser.GetAsync(location);
+            response = await browser.GetAsync(location, TestContext.Current.CancellationToken);
             Assert.True(response.StatusCode == HttpStatusCode.Redirect || response.StatusCode == HttpStatusCode.Found,
-                $"{location} answered {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}\nVisited: {string.Join("\n", visited)}");
+                $"{location} answered {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)}\nVisited: {string.Join("\n", visited)}");
             location = response.Headers.Location is { } next && !next.IsAbsoluteUri ? new Uri(new Uri(address), next) : response.Headers.Location;
         }
         response?.Dispose();
@@ -347,13 +347,13 @@ public sealed class EmbeddedIdentityServerTests
             ["redirect_uri"] = address + "/umbraco/oauth_complete",
             ["code"] = QueryHelpers.ParseQuery(location.Query)["code"].ToString(),
             ["code_verifier"] = verifier,
-        }));
-        var tokenBody = await tokenResponse.Content.ReadAsStringAsync();
+        }), TestContext.Current.CancellationToken);
+        var tokenBody = await tokenResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.True(tokenResponse.IsSuccessStatusCode, tokenBody);
         using var current = new HttpRequestMessage(HttpMethod.Get, "/umbraco/management/api/v1/user/current");
         current.Headers.Authorization = new AuthenticationHeaderValue("Bearer", JsonDocument.Parse(tokenBody).RootElement.GetProperty("access_token").GetString());
-        using var currentResponse = await browser.SendAsync(current);
-        var currentBody = await currentResponse.Content.ReadAsStringAsync();
+        using var currentResponse = await browser.SendAsync(current, TestContext.Current.CancellationToken);
+        var currentBody = await currentResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.True(currentResponse.IsSuccessStatusCode, currentBody);
         Assert.Contains(email, currentBody, StringComparison.OrdinalIgnoreCase);
     }
@@ -379,8 +379,8 @@ public sealed class EmbeddedIdentityServerTests
         {
             ["grant_type"] = "authorization_code", ["code"] = code, ["redirect_uri"] = RedirectUri,
             ["client_id"] = ClientId, ["client_secret"] = ClientSecret, ["code_verifier"] = verifier,
-        }));
-        var tokenJson = await tokenResponse.Content.ReadAsStringAsync();
+        }), TestContext.Current.CancellationToken);
+        var tokenJson = await tokenResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.True(tokenResponse.IsSuccessStatusCode, tokenJson);
         var idToken = new JsonWebToken(JsonDocument.Parse(tokenJson).RootElement.GetProperty("id_token").GetString());
         Assert.Equal(issuer, idToken.Issuer);
@@ -402,7 +402,7 @@ public sealed class EmbeddedIdentityServerTests
         Assert.DoesNotContain("/connect/", discovery.GetProperty("token_endpoint").GetString());
         // No endpoint is mapped: the path falls through to content routing.
         Assert.Null(site.Services.GetService<EmbeddedIdentityServerHost>());
-        using var authorize = await anonymous.GetAsync("/connect/authorize?client_id=anything");
+        using var authorize = await anonymous.GetAsync("/connect/authorize?client_id=anything", TestContext.Current.CancellationToken);
         Assert.NotEqual(HttpStatusCode.BadRequest, authorize.StatusCode);
         Assert.NotEqual(HttpStatusCode.Unauthorized, authorize.StatusCode);
         Assert.False(File.Exists(Path.Combine(site.DataRoot, "keys", "identity-server", "signing-key.bin")));

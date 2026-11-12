@@ -65,7 +65,7 @@ public sealed class DefinitionInstallTests
                 builder.Services.AddSingleton(probe);
                 builder.Services.AddTransient<INotificationAsyncHandler<uSyncImportingItemNotification>, ImportProbe>();
             },
-        });
+        }, TestContext.Current.CancellationToken);
 
         Assert.True(probe.Seen, "uSync's first boot did not import anything.");
         Assert.Empty(probe.Missing);
@@ -115,7 +115,7 @@ public sealed class DefinitionInstallTests
                     // This assembly embeds no schema, so reading its definitions fails the migration.
                     builder.Services.AddSingleton(new AppBlocksSchema(typeof(DefinitionInstallTests).Assembly));
                 },
-            });
+            }, TestContext.Current.CancellationToken);
         });
         Assert.Contains(nameof(RuntimeLevel.BootFailed), exception.Message);
         var cause = Assert.IsType<BootFailedException>(exception.InnerException);
@@ -131,7 +131,7 @@ public sealed class DefinitionInstallTests
     [Fact]
     public async Task An_import_cannot_put_a_stale_copy_of_an_AppBlocks_definition_back()
     {
-        await using var site = await TestSite.StartAsync(new TestSiteOptions { Application = typeof(Program).Assembly });
+        await using var site = await TestSite.StartAsync(new TestSiteOptions { Application = typeof(Program).Assembly }, TestContext.Current.CancellationToken);
         await site.WaitForPublishedAsync(OrdersInteractive, TimeSpan.FromMinutes(2));
 
         // The report block as the old export had it: no paper report, and a differently named heading.
@@ -151,7 +151,7 @@ public sealed class DefinitionInstallTests
         var services = scope.ServiceProvider;
         // As the backoffice's Import button does it: the start of the process, then each handler in turn.
         var service = services.GetRequiredService<ISyncActionService>();
-        await service.StartProcessAsync(HandlerActions.Import);
+        await service.StartProcessAsync(new SyncStartActionRequest { HandlerAction = HandlerActions.Import });
         var actions = new List<uSyncAction>();
         foreach (var handler in service.GetActionHandlers(HandlerActions.Import, new uSyncOptions { Group = "Settings" }))
             actions.AddRange((await service.ImportHandlerAsync(new SyncActionOptions { Handler = handler.Alias, Force = true, Group = "Settings", Folders = [site.USyncFolder] }, null)).Actions);

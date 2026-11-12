@@ -18,7 +18,7 @@ public sealed class AttachmentsHttpTests
     [ResetPublishedContentServices]
     public async Task The_sample_orders_files_block_follows_the_samples_records_and_class()
     {
-        await using var site = await TestSite.StartAsync(new() { Application = typeof(Program).Assembly });
+        await using var site = await TestSite.StartAsync(new() { Application = typeof(Program).Assembly }, TestContext.Current.CancellationToken);
         await site.WaitForPublishedAsync(ApplicationStarter.FormPageKey);
         var member = site.CreateMember("files", "files@example.invalid", "Files member");
         using var client = await site.SignInMemberAsync(member);
@@ -38,7 +38,7 @@ public sealed class AttachmentsHttpTests
         var uploaded = await files.UploadAsync(new("invoice.pdf", "application/pdf", Encoding.UTF8.GetBytes("first")), "Invoice", query: "id=4");
         Assert.Equal(HttpStatusCode.Created, uploaded.Response.StatusCode);
         Assert.Equal("Files member", uploaded.Body.GetProperty("uploadedBy").GetString());
-        Assert.Equal("first", await (await files.DownloadAsync(uploaded.Id!.Value, "id=4")).Content.ReadAsStringAsync());
+        Assert.Equal("first", await (await files.DownloadAsync(uploaded.Id!.Value, "id=4")).Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         Assert.Equal(HttpStatusCode.NotFound, (await files.DownloadAsync(uploaded.Id!.Value, "id=5")).StatusCode);
     }
 }

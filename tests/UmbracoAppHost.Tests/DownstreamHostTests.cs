@@ -70,7 +70,7 @@ public sealed class DownstreamHostTests
         WriteHostExport(export);
         var instance = Path.Combine(root, "instance");
         var reportView = Path.Combine(Directory.CreateDirectory(Path.Combine(root, "Views")).FullName, "DownstreamReport.cshtml");
-        await File.WriteAllTextAsync(reportView, ReportView);
+        await File.WriteAllTextAsync(reportView, ReportView, TestContext.Current.CancellationToken);
 
         await using (var app = await StartAsync(root, export))
         {
@@ -78,14 +78,14 @@ public sealed class DownstreamHostTests
             {
                 var runtime = app.Services.GetRequiredService<IRuntimeState>();
                 var readiness = app.Services.GetRequiredService<IContentRoutingReadiness>();
-                for (var i = 0; i < 600 && (runtime.Level != RuntimeLevel.Run || !readiness.IsReady); i++) await Task.Delay(100);
+                for (var i = 0; i < 600 && (runtime.Level != RuntimeLevel.Run || !readiness.IsReady); i++) await Task.Delay(100, TestContext.Current.CancellationToken);
                 // The startup handlers rename the installed administrator, and run after the first boot's import.
                 var users = app.Services.GetRequiredService<IUserService>();
-                for (var i = 0; i < 300 && (await users.GetAsync(Constants.Security.SuperUserKey))?.Username != "admin"; i++) await Task.Delay(100);
+                for (var i = 0; i < 300 && (await users.GetAsync(Constants.Security.SuperUserKey))?.Username != "admin"; i++) await Task.Delay(100, TestContext.Current.CancellationToken);
                 using var scope = app.Services.CreateScope();
                 var services = scope.ServiceProvider;
                 var contents = services.GetRequiredService<IContentService>();
-                for (var i = 0; i < 300 && contents.GetById(PaperKey)?.Published != true; i++) await Task.Delay(100);
+                for (var i = 0; i < 300 && contents.GetById(PaperKey)?.Published != true; i++) await Task.Delay(100, TestContext.Current.CancellationToken);
 
                 // The working folder holds the library's export without the samples, and the host's files beside it.
                 Assert.False(File.Exists(Path.Combine(instance, "uSync", "Content", "sample-application.config")));
@@ -121,21 +121,21 @@ public sealed class DownstreamHostTests
 
                 var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
                 using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = new Uri(address) };
-                var signedIn = await client.PostAsJsonAsync("/umbraco/management/api/v1/security/back-office/login", new { username = "admin", password = AdminPassword });
-                Assert.True(signedIn.IsSuccessStatusCode, $"Login returned {signedIn.StatusCode}: {await signedIn.Content.ReadAsStringAsync()}");
-                var home = await client.GetAsync("/");
-                var homeHtml = await home.Content.ReadAsStringAsync();
+                var signedIn = await client.PostAsJsonAsync("/umbraco/management/api/v1/security/back-office/login", new { username = "admin", password = AdminPassword }, cancellationToken: TestContext.Current.CancellationToken);
+                Assert.True(signedIn.IsSuccessStatusCode, $"Login returned {signedIn.StatusCode}: {await signedIn.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)}");
+                var home = await client.GetAsync("/", TestContext.Current.CancellationToken);
+                var homeHtml = await home.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
                 Assert.True(home.IsSuccessStatusCode, $"Home returned {home.StatusCode}: {homeHtml}");
                 Assert.Contains("Downstream home", homeHtml);
-                var paper = await client.GetAsync($"/api/paper-reports/{PaperKey}?format=html");
-                var print = await paper.Content.ReadAsStringAsync();
+                var paper = await client.GetAsync($"/api/paper-reports/{PaperKey}?format=html", TestContext.Current.CancellationToken);
+                var print = await paper.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
                 Assert.True(paper.IsSuccessStatusCode, print);
                 Assert.Equal("text/html", paper.Content.Headers.ContentType?.MediaType);
                 Assert.Contains("<h1>Downstream report</h1>", print);
                 Assert.Contains("<p class=\"one\">1</p>", print);
 
                 Assert.Empty(Directory.EnumerateFiles(Path.Combine(instance, "data"), SampleReport.DatabaseFile, SearchOption.AllDirectories));
-                using var state = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(instance, ".apphost", "runtime.json")));
+                using var state = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(instance, ".apphost", "runtime.json"), TestContext.Current.CancellationToken));
                 Assert.False(state.RootElement.GetProperty("samples").GetBoolean());
                 Assert.Equal(export, state.RootElement.GetProperty("hostExport").GetString());
 
@@ -146,21 +146,21 @@ public sealed class DownstreamHostTests
                 Assert.True((await templates.DeleteAsync("DownstreamExtra", Constants.Security.SuperUserKey)).Success);
                 Assert.DoesNotContain("DownstreamExtra", await AllowedAsync(aliases => !aliases.Contains("DownstreamExtra")));
             }
-            finally { await app.StopAsync(); }
+            finally { await app.StopAsync(TestContext.Current.CancellationToken); }
         }
 
         const string change = "\n@* Changed in the host. *@\n";
         var shippedView = Path.Combine(root, "Views", "ReportPage.cshtml");
-        await File.AppendAllTextAsync(shippedView, change);
-        await File.AppendAllTextAsync(reportView, change);
+        await File.AppendAllTextAsync(shippedView, change, TestContext.Current.CancellationToken);
+        await File.AppendAllTextAsync(reportView, change, TestContext.Current.CancellationToken);
         await using (var app = await StartAsync(root, export))
         {
             try
             {
-                Assert.Equal(Text(Shipped("Views/ReportPage.cshtml")), Text(await File.ReadAllTextAsync(shippedView)));
-                Assert.EndsWith(change, await File.ReadAllTextAsync(reportView));
+                Assert.Equal(Text(Shipped("Views/ReportPage.cshtml")), Text(await File.ReadAllTextAsync(shippedView, TestContext.Current.CancellationToken)));
+                Assert.EndsWith(change, await File.ReadAllTextAsync(reportView, TestContext.Current.CancellationToken));
             }
-            finally { await app.StopAsync(); }
+            finally { await app.StopAsync(TestContext.Current.CancellationToken); }
         }
     }
 
@@ -187,7 +187,7 @@ public sealed class DownstreamHostTests
                 ["UmbracoAppHost:HostExport"] = export,
                 ["Accounts:EnsureMemberGroups:0"] = editors,
             },
-        });
+        }, TestContext.Current.CancellationToken);
         await site.WaitForPublishedAsync(RowsKey);
 
         // An import that ran before the group existed would drop it from the picker, and every reader could write.

@@ -64,7 +64,7 @@ public sealed class UsernameLoginTests
         UmbracoTestSupport.UseSingleServer(builder.Services);
         await using var app = builder.Build();
         await app.UseUmbracoAppHostAsync();
-        await app.StartAsync();
+        await app.StartAsync(TestContext.Current.CancellationToken);
         try
         {
             // Umbraco completes unattended upgrades in a background service after the host starts.
@@ -88,20 +88,20 @@ public sealed class UsernameLoginTests
                 BaseAddress = new Uri(address),
                 Timeout = TimeSpan.FromSeconds(20),
             };
-            var loginPage = await client.GetStringAsync("/umbraco/login");
+            var loginPage = await client.GetStringAsync("/umbraco/login", TestContext.Current.CancellationToken);
             Assert.Contains("<umb-auth", loginPage);
             Assert.DoesNotContain("username-is-email", loginPage);
 
             const string loginUrl = "/umbraco/management/api/v1/security/back-office/login";
-            using var emailLogin = await client.PostAsJsonAsync(loginUrl, new { username = email, password });
+            using var emailLogin = await client.PostAsJsonAsync(loginUrl, new { username = email, password }, cancellationToken: TestContext.Current.CancellationToken);
             Assert.True(emailLogin.StatusCode == HttpStatusCode.Unauthorized,
-                $"Email login returned {emailLogin.StatusCode}: {await emailLogin.Content.ReadAsStringAsync()}");
-            using var wrongPassword = await client.PostAsJsonAsync(loginUrl, new { username, password = "Incorrect-password91!" });
+                $"Email login returned {emailLogin.StatusCode}: {await emailLogin.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)}");
+            using var wrongPassword = await client.PostAsJsonAsync(loginUrl, new { username, password = "Incorrect-password91!" }, cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Unauthorized, wrongPassword.StatusCode);
-            using var usernameLogin = await client.PostAsJsonAsync(loginUrl, new { username, password });
+            using var usernameLogin = await client.PostAsJsonAsync(loginUrl, new { username, password }, cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.OK, usernameLogin.StatusCode);
             Assert.Contains(usernameLogin.Headers.GetValues("Set-Cookie"), cookie => cookie.StartsWith("UMB_UCONTEXT="));
         }
-        finally { await app.StopAsync(); }
+        finally { await app.StopAsync(TestContext.Current.CancellationToken); }
     }
 }

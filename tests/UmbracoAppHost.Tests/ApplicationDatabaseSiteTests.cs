@@ -31,7 +31,7 @@ public sealed class ApplicationDatabaseSiteTests
         var options = new TestSiteOptions { Application = typeof(Program).Assembly };
         options.Settings[$"ConnectionStrings:{SampleReport.Connection}"] = $"Data Source={file};Pooling=False";
         options.Settings[$"ConnectionStrings:{SampleReport.Connection}_ProviderName"] = "Microsoft.Data.Sqlite";
-        await using var site = await TestSite.StartAsync(options);
+        await using var site = await TestSite.StartAsync(options, TestContext.Current.CancellationToken);
         using var scope = site.CreateScope();
 
         using (var reports = scope.ServiceProvider.GetRequiredService<IReportConnectionFactory>().CreateConnection(SampleReport.Connection))

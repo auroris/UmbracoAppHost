@@ -51,7 +51,7 @@ public sealed class ReferenceDevelopmentLoginTests
                 var administrator = (await users.FindByIdAsync(Constants.Security.SuperUserKey.ToString()))!;
                 for (var attempt = 0; attempt < 100 && administrator.UserName != "admin"; attempt++)
                 {
-                    await Task.Delay(100);
+                    await Task.Delay(100, TestContext.Current.CancellationToken);
                     administrator = (await users.FindByIdAsync(Constants.Security.SuperUserKey.ToString()))!;
                 }
                 Assert.Equal("admin", administrator.UserName);
@@ -75,7 +75,7 @@ public sealed class ReferenceDevelopmentLoginTests
                 Assert.True(locked.Failures > 0);
                 Assert.Equal(TwoFactorSecret, locked.TwoFactorSecret);
             }
-            finally { await app.StopAsync(); }
+            finally { await app.StopAsync(TestContext.Current.CancellationToken); }
         }
 
         await using (var app = await StartApp(root, "Development"))
@@ -89,7 +89,7 @@ public sealed class ReferenceDevelopmentLoginTests
                     using var scope = app.Services.CreateScope();
                     administrator = await scope.ServiceProvider.GetRequiredService<IBackOfficeUserManager>()
                         .FindByIdAsync(Constants.Security.SuperUserKey.ToString());
-                    if (administrator?.UserName != "admin") await Task.Delay(100);
+                    if (administrator?.UserName != "admin") await Task.Delay(100, TestContext.Current.CancellationToken);
                 }
                 Assert.Equal("admin", administrator?.UserName);
                 Assert.Equal("admin@localhost.local", administrator!.Email);
@@ -103,8 +103,8 @@ public sealed class ReferenceDevelopmentLoginTests
                 using (var browser = Browser(app))
                 {
                     var loginStarted = DateTime.UtcNow;
-                    using var login = await browser.PostAsJsonAsync(Api + "/login", new { username = "admin", password = OtherPassword });
-                    Assert.True(login.IsSuccessStatusCode, await login.Content.ReadAsStringAsync());
+                    using var login = await browser.PostAsJsonAsync(Api + "/login", new { username = "admin", password = OtherPassword }, cancellationToken: TestContext.Current.CancellationToken);
+                    Assert.True(login.IsSuccessStatusCode, await login.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
                     Assert.Contains(login.Headers.GetValues("Set-Cookie"), cookie => cookie.StartsWith("UMB_UCONTEXT="));
                     await CompleteAuthorization(browser);
                     var unlocked = await AccountState(app);
@@ -127,14 +127,13 @@ public sealed class ReferenceDevelopmentLoginTests
                     Assert.Equal(unlocked, await AccountState(app));
 
                     // Recovery is usable for the actual native account repair operation.
-                    using var unlock = await browser.PostAsJsonAsync("/umbraco/management/api/v1/user/unlock",
-                        new { userIds = new[] { new { id = Constants.Security.SuperUserKey } } });
-                    Assert.True(unlock.IsSuccessStatusCode, await unlock.Content.ReadAsStringAsync());
+                    using var unlock = await browser.PostAsJsonAsync("/umbraco/management/api/v1/user/unlock", new { userIds = new[] { new { id = Constants.Security.SuperUserKey } } }, cancellationToken: TestContext.Current.CancellationToken);
+                    Assert.True(unlock.IsSuccessStatusCode, await unlock.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
                     Assert.False((await AccountState(app)).Locked);
                 }
                 await LockAccount(app);
             }
-            finally { await app.StopAsync(); }
+            finally { await app.StopAsync(TestContext.Current.CancellationToken); }
         }
 
         // Hosting.Debug alone does not enable recovery when the selected flow is Form.
@@ -149,7 +148,7 @@ public sealed class ReferenceDevelopmentLoginTests
                 // Restore a lockout so the following Production startup must enforce it too.
                 await LockAccount(app);
             }
-            finally { await app.StopAsync(); }
+            finally { await app.StopAsync(TestContext.Current.CancellationToken); }
         }
 
         await using (var app = await StartApp(root, "Production"))
@@ -163,7 +162,7 @@ public sealed class ReferenceDevelopmentLoginTests
                 Assert.Equal(TwoFactorSecret, final.TwoFactorSecret);
                 Assert.Equal(TestTwoFactorProvider.Name, final.TwoFactorProviders);
             }
-            finally { await app.StopAsync(); }
+            finally { await app.StopAsync(TestContext.Current.CancellationToken); }
         }
     }
 

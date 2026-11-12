@@ -46,7 +46,7 @@ public sealed class MemberSignInHttpTests
                 await visitor.ResolveAsync();
                 return Results.Json(new { visitor.IsBackOfficeUser, StartMemberSignIn = visitor.ShouldStartMemberSignIn(false, false) });
             }),
-        });
+        }, TestContext.Current.CancellationToken);
         var member = site.CreateMember("member-login", "member-login@example.invalid", "Member login");
         const string password = "Local-test-only-Member91!";
         await site.SetPasswordAsync(member, password);
@@ -55,17 +55,17 @@ public sealed class MemberSignInHttpTests
 
         using (var administrator = site.CreateClient())
         {
-            (await administrator.GetAsync($"{prefix}/__tests/login/{Constants.Security.SuperUserKey}?scheme=backoffice&name=Member%20sign-in%20test%20administrator")).EnsureSuccessStatusCode();
-            var memberNeeded = await administrator.GetFromJsonAsync<System.Text.Json.JsonElement>(prefix + "/__tests/member-signin-needed");
+            (await administrator.GetAsync($"{prefix}/__tests/login/{Constants.Security.SuperUserKey}?scheme=backoffice&name=Member%20sign-in%20test%20administrator", TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
+            var memberNeeded = await administrator.GetFromJsonAsync<System.Text.Json.JsonElement>(prefix + "/__tests/member-signin-needed", cancellationToken: TestContext.Current.CancellationToken);
             Assert.True(memberNeeded.GetProperty("isBackOfficeUser").GetBoolean());
             Assert.True(memberNeeded.GetProperty("startMemberSignIn").GetBoolean());
         }
 
-        var automatic = await browser.GetAsync(destination);
+        var automatic = await browser.GetAsync(destination, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, automatic.StatusCode);
         Assert.True(automatic.Headers.CacheControl?.NoStore);
         Assert.StartsWith(prefix + "/orders-form/?ufprt=", automatic.Headers.Location!.OriginalString);
-        var challenge = await browser.GetAsync(automatic.Headers.Location);
+        var challenge = await browser.GetAsync(automatic.Headers.Location, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
         Assert.Equal("identity.example.invalid", challenge.Headers.Location!.Host);
         Assert.Equal(destination, provider.Properties!.Items[SsoLoginUrls.MemberReturnUrlProperty]);
@@ -75,7 +75,7 @@ public sealed class MemberSignInHttpTests
         var state = QueryHelpers.ParseQuery(challenge.Headers.Location.Query)["state"].ToString();
         var remoteFailure = await browser.GetAsync(QueryHelpers.AddQueryString(prefix + "/signin-oidc/member", new Dictionary<string, string?> {
             ["error"] = "temporarily_unavailable", ["error_description"] = "The test provider is unavailable.", ["state"] = state,
-        }));
+        }), TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, remoteFailure.StatusCode);
         var fallbackUrl = remoteFailure.Headers.Location!.OriginalString;
         Assert.StartsWith(destination + "&sso-local=1", fallbackUrl);
@@ -84,8 +84,8 @@ public sealed class MemberSignInHttpTests
         Assert.Contains("Sign in with Test Identity", fallback);
 
         provider.Unavailable = true;
-        var fresh = await browser.GetAsync(destination);
-        var unavailable = await browser.GetAsync(fresh.Headers.Location);
+        var fresh = await browser.GetAsync(destination, TestContext.Current.CancellationToken);
+        var unavailable = await browser.GetAsync(fresh.Headers.Location, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, unavailable.StatusCode);
         Assert.StartsWith(destination + "&sso-local=1", unavailable.Headers.Location!.OriginalString);
         Assert.Contains("The identity server is unavailable", await Page(browser, unavailable.Headers.Location.OriginalString));
@@ -95,13 +95,13 @@ public sealed class MemberSignInHttpTests
         var retry = ReadForm(fallback, form => form.Contains("name=\"provider\"", StringComparison.Ordinal));
         var missingToken = new Dictionary<string, string>(retry.Fields);
         missingToken.Remove("__RequestVerificationToken");
-        Assert.Equal(HttpStatusCode.BadRequest, (await browser.PostAsync(retry.Action, new FormUrlEncodedContent(missingToken))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await browser.PostAsync(retry.Action, new FormUrlEncodedContent(missingToken), TestContext.Current.CancellationToken)).StatusCode);
         retry.Fields["provider"] = "Identity.Application";
-        var wrongProvider = await browser.PostAsync(retry.Action, new FormUrlEncodedContent(retry.Fields));
+        var wrongProvider = await browser.PostAsync(retry.Action, new FormUrlEncodedContent(retry.Fields), TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, wrongProvider.StatusCode);
         Assert.Contains("sso-local=1", wrongProvider.Headers.Location!.OriginalString);
         retry.Fields["provider"] = scheme;
-        var retried = await browser.PostAsync(retry.Action, new FormUrlEncodedContent(retry.Fields));
+        var retried = await browser.PostAsync(retry.Action, new FormUrlEncodedContent(retry.Fields), TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, retried.StatusCode);
         Assert.Equal("identity.example.invalid", retried.Headers.Location!.Host);
 
@@ -119,11 +119,11 @@ public sealed class MemberSignInHttpTests
         Assert.DoesNotContain("ufprt", login.Action);
         login.Fields["loginModel.Username"] = member.Username;
         login.Fields["loginModel.Password"] = "Wrong-password91!";
-        var refusedPassword = await browser.PostAsync(login.Action, new FormUrlEncodedContent(login.Fields));
+        var refusedPassword = await browser.PostAsync(login.Action, new FormUrlEncodedContent(login.Fields), TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, refusedPassword.StatusCode);
-        Assert.Contains("Invalid username or password", await refusedPassword.Content.ReadAsStringAsync());
+        Assert.Contains("Invalid username or password", await refusedPassword.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         login.Fields["loginModel.Password"] = password;
-        var signedIn = await browser.PostAsync(login.Action, new FormUrlEncodedContent(login.Fields));
+        var signedIn = await browser.PostAsync(login.Action, new FormUrlEncodedContent(login.Fields), TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Redirect, signedIn.StatusCode);
         Assert.Equal(destination, signedIn.Headers.Location!.OriginalString);
         Assert.Contains("data-app-form", await Page(browser, destination));
@@ -152,11 +152,11 @@ public sealed class MemberSignInHttpTests
                     ["Accounts:MembersManagedBy"] = "Umbraco",
                 },
                 ConfigureBuilder = builder => UseTestProvider(builder, new ProviderProbe()),
-            });
+            }, TestContext.Current.CancellationToken);
             using var browser = site.CreateClient();
-            var automatic = await browser.GetAsync("/orders-form/?id=4");
+            var automatic = await browser.GetAsync("/orders-form/?id=4", TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Redirect, automatic.StatusCode);
-            var challenge = await browser.GetAsync(automatic.Headers.Location);
+            var challenge = await browser.GetAsync(automatic.Headers.Location, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
             Assert.Equal("identity.example.invalid", challenge.Headers.Location!.Host);
         }

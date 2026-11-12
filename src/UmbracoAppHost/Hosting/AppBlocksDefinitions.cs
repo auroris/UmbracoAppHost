@@ -49,11 +49,11 @@ public sealed class AppBlocksDefinitionImport(SchemaInstaller installer, AppBloc
 
     public Task HandleAsync(uSyncImportingItemNotification notification, CancellationToken cancellationToken)
     {
-        if (Guid.TryParse(notification.Item.Attribute("Key")?.Value, out var key) && definitions.Owns(key))
+        if (notification.Item is { } item && Guid.TryParse(item.Attribute("Key")?.Value, out var key) && definitions.Owns(key))
         {
             notification.Cancel = true;
             notification.Message = "AppBlocks installs this definition, so uSync does not import it.";
-            logger.LogInformation("Skipped the uSync copy of {Alias} ({Key}), which AppBlocks installs.", notification.Item.Attribute("Alias")?.Value, key);
+            logger.LogInformation("Skipped the uSync copy of {Alias} ({Key}), which AppBlocks installs.", item.Attribute("Alias")?.Value, key);
         }
         return Task.CompletedTask;
     }

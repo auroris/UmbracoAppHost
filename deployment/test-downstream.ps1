@@ -29,6 +29,7 @@ $dataSourcesKey = ([xml](Get-Content -LiteralPath (Join-Path $library 'uSync/Con
 $hostContent = @('downstream-home.config', 'downstream-paper-report.config', 'downstream-rows.config')
 
 foreach ($folder in @('uSync/Content', 'uSync/Templates', 'Views')) { New-Item -ItemType Directory -Force (Join-Path $projectRoot $folder) | Out-Null }
+Initialize-ViewImports $repository $projectRoot
 Set-Content -LiteralPath (Join-Path $OutputRoot .gitignore) -Encoding utf8NoBOM -Value @'
 bin/
 obj/

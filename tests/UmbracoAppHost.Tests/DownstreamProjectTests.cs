@@ -37,7 +37,7 @@ public sealed class DownstreamProjectTests
             Application = typeof(Program).Assembly,
             ProjectFolder = project,
             Host = typeof(DownstreamProgram),
-        });
+        }, TestContext.Current.CancellationToken);
 
         Assert.Equal(project, site.ProjectFolder);
         // The project's InstanceRoot gives way to the site's temporary one.
@@ -45,14 +45,14 @@ public sealed class DownstreamProjectTests
 
         // appsettings.json and appsettings.Development.json, and the host's endpoint that reads them.
         using var browser = site.CreateClient();
-        Assert.Equal("from appsettings.json|Development", await (await site.GetPageAsync(browser, "/downstream-settings")).Content.ReadAsStringAsync());
+        Assert.Equal("from appsettings.json|Development", await (await site.GetPageAsync(browser, "/downstream-settings")).Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
 
         // UmbracoAppHost:Samples is false in the project, and its committed export is imported on first boot.
         await site.WaitForPublishedAsync(DownstreamHostTests.PaperKey);
         await site.WaitForPublishedAsync(DownstreamHostTests.HomeKey);
         using (var scope = site.CreateScope())
             Assert.All(SampleContent.Keys, key => Assert.Null(scope.ServiceProvider.GetRequiredService<IContentService>().GetById(key)));
-        using (var state = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(site.InstanceRoot, ".apphost", "runtime.json"))))
+        using (var state = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(site.InstanceRoot, ".apphost", "runtime.json"), TestContext.Current.CancellationToken)))
         {
             Assert.Equal(project, state.RootElement.GetProperty("projectRoot").GetString());
             Assert.Equal(Path.Combine(project, "uSync"), state.RootElement.GetProperty("hostExport").GetString());
@@ -62,17 +62,17 @@ public sealed class DownstreamProjectTests
         Assert.Equal(project, site.Services.GetRequiredService<DownstreamProjectRoot>().Path);
         await using (var connection = site.Services.GetRequiredService<IReportConnectionFactory>().CreateConnection("DownstreamDb"))
         {
-            await connection.OpenAsync();
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
             await using var command = connection.CreateCommand();
             command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'DOWNSTREAM_ROWS'";
-            Assert.Equal(1L, await command.ExecuteScalarAsync());
+            Assert.Equal(1L, await command.ExecuteScalarAsync(TestContext.Current.CancellationToken));
         }
 
         // Settings -> AppBlocks -> Connections and the report source picker offer the host's database, read-only, and read its tables.
         using (var settings = await site.SignInAsAdministratorAsync())
         {
             const string api = "/umbraco/management/api/v1/appblocks";
-            var listed = await settings.GetStringAsync(api + "/connections");
+            var listed = await settings.GetStringAsync(api + "/connections", TestContext.Current.CancellationToken);
             using (var connections = JsonDocument.Parse(listed))
             {
                 var downstream = connections.RootElement.EnumerateArray().Single(c => c.GetProperty("name").GetString() == "DownstreamDb");
@@ -81,22 +81,22 @@ public sealed class DownstreamProjectTests
             }
             Assert.DoesNotContain("sqlite.db", listed, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("ReportsSampleDb", listed); // UmbracoAppHost:Samples is false.
-            Assert.Contains("DOWNSTREAM_ROWS", await settings.GetStringAsync(api + "/tables?connection=DownstreamDb"));
+            Assert.Contains("DOWNSTREAM_ROWS", await settings.GetStringAsync(api + "/tables?connection=DownstreamDb", TestContext.Current.CancellationToken));
             var selection = JsonSerializer.Serialize(new { kind = "table", connection = "DownstreamDb", source = "DOWNSTREAM_ROWS" });
-            using var preview = await settings.PostAsync(api + "/report-preview", JsonContent.Create(new { dataSource = selection }));
-            Assert.True(preview.IsSuccessStatusCode, await preview.Content.ReadAsStringAsync());
+            using var preview = await settings.PostAsync(api + "/report-preview", JsonContent.Create(new { dataSource = selection }), TestContext.Current.CancellationToken);
+            Assert.True(preview.IsSuccessStatusCode, await preview.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
             var unknown = JsonSerializer.Serialize(new { kind = "table", connection = "NotRegistered", source = "DOWNSTREAM_ROWS" });
-            using var refused = await settings.PostAsync(api + "/report-preview", JsonContent.Create(new { dataSource = unknown }));
+            using var refused = await settings.PostAsync(api + "/report-preview", JsonContent.Create(new { dataSource = unknown }), TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.UnprocessableEntity, refused.StatusCode);
         }
 
         // The project's view renders its imported paper report, and the administrator keeps the site's password.
         Assert.True(File.Exists(Path.Combine(site.Root, "Views", "DownstreamReport.cshtml")));
         using var admin = await site.SignInBackOfficeAsync(site.AdminUserName, site.AdminPassword);
-        var home = await (await site.GetPageAsync(admin, "/")).Content.ReadAsStringAsync();
+        var home = await (await site.GetPageAsync(admin, "/")).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains("Downstream home", home);
         var paper = await site.DownloadPaperReportAsync(admin, DownstreamHostTests.PaperKey, "?format=html");
-        var print = await paper.Content.ReadAsStringAsync();
+        var print = await paper.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.True(paper.IsSuccessStatusCode, print);
         Assert.Contains("<h1>Downstream report</h1>", print);
     }

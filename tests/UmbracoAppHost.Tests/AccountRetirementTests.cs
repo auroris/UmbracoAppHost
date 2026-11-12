@@ -178,15 +178,15 @@ public sealed class AccountRetirementTests(AccountsTestHost host) : IClassFixtur
 
         // The user is signed in to the backoffice, which gives it a sign-in history.
         using var session = await host.SignInAsync("http.user", password);
-        using (var before = await session.GetAsync(currentUser))
+        using (var before = await session.GetAsync(currentUser, TestContext.Current.CancellationToken))
             Assert.Equal(HttpStatusCode.OK, before.StatusCode);
         Assert.NotNull((await host.Users.GetAsync(user.Key))!.LastLoginDate);
 
         using var administrator = await host.SignInAsAdministratorAsync();
-        using var deleteUser = await administrator.DeleteAsync($"/umbraco/management/api/v1/user/{user.Key}");
-        Assert.True(deleteUser.StatusCode == HttpStatusCode.OK, $"Deleting the user returned {deleteUser.StatusCode}: {await deleteUser.Content.ReadAsStringAsync()}");
-        using var deleteMember = await administrator.DeleteAsync($"/umbraco/management/api/v1/member/{member.Key}");
-        Assert.True(deleteMember.StatusCode == HttpStatusCode.OK, $"Deleting the member returned {deleteMember.StatusCode}: {await deleteMember.Content.ReadAsStringAsync()}");
+        using var deleteUser = await administrator.DeleteAsync($"/umbraco/management/api/v1/user/{user.Key}", TestContext.Current.CancellationToken);
+        Assert.True(deleteUser.StatusCode == HttpStatusCode.OK, $"Deleting the user returned {deleteUser.StatusCode}: {await deleteUser.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)}");
+        using var deleteMember = await administrator.DeleteAsync($"/umbraco/management/api/v1/member/{member.Key}", TestContext.Current.CancellationToken);
+        Assert.True(deleteMember.StatusCode == HttpStatusCode.OK, $"Deleting the member returned {deleteMember.StatusCode}: {await deleteMember.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)}");
 
         var retiredUser = (await host.Users.GetAsync(user.Key))!;
         Assert.Equal(userSid, retiredUser.Username);
@@ -198,7 +198,7 @@ public sealed class AccountRetirementTests(AccountsTestHost host) : IClassFixtur
 
         // The retired user's token is revoked, and its cookie can no longer obtain one, not even
         // after its old username has been given to a new account.
-        using (var after = await session.GetAsync(currentUser))
+        using (var after = await session.GetAsync(currentUser, TestContext.Current.CancellationToken))
             Assert.Equal(HttpStatusCode.Unauthorized, after.StatusCode);
         await host.CreateUserAsync("http.user", "http.user@example.invalid", "Http User");
         using (var reauthorize = await host.AuthorizeAsync(session))
@@ -210,7 +210,7 @@ public sealed class AccountRetirementTests(AccountsTestHost host) : IClassFixtur
         }
 
         // Umbraco's own refusals still reach the backoffice as problem details: nobody deletes themselves.
-        using var deleteSelf = await administrator.DeleteAsync($"/umbraco/management/api/v1/user/{Constants.Security.SuperUserKey}");
+        using var deleteSelf = await administrator.DeleteAsync($"/umbraco/management/api/v1/user/{Constants.Security.SuperUserKey}", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.BadRequest, deleteSelf.StatusCode);
         Assert.Equal("admin", (await host.Users.GetAsync(Constants.Security.SuperUserKey))!.Username);
     }

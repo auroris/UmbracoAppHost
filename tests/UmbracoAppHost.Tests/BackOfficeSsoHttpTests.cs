@@ -59,7 +59,7 @@ public sealed class BackOfficeSsoHttpTests
                 builder.Services.PostConfigure<BackOfficeIdentityOptions>(options =>
                     options.Tokens.ProviderMap[TestTwoFactorProvider.Name] = new TokenProviderDescriptor(typeof(TestTwoFactorProvider)));
             },
-        });
+        }, TestContext.Current.CancellationToken);
         var address = site.Address;
         var callback = new Uri(address, Prefix + "/umbraco/oauth_complete").ToString();
         var verifier = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
@@ -79,19 +79,19 @@ public sealed class BackOfficeSsoHttpTests
         {
             var continuation = await OpenFallback(browser, authorize, challenge);
             Assert.Equal(1, metadata.Calls);
-            using var wrongPassword = await browser.PostAsJsonAsync(Api + "/login", new { username = "admin", password = "An incorrect password" });
+            using var wrongPassword = await browser.PostAsJsonAsync(Api + "/login", new { username = "admin", password = "An incorrect password" }, cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Unauthorized, wrongPassword.StatusCode);
             Assert.Null(wrongPassword.Headers.Location);
             Assert.Equal(1, metadata.Calls);
 
             // The form's ReturnUrl still challenges only the native password scheme after a bad password.
-            using var unsigned = await browser.GetAsync(continuation);
+            using var unsigned = await browser.GetAsync(continuation, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Redirect, unsigned.StatusCode);
             Assert.Equal(Prefix + "/umbraco/login", new Uri(address, unsigned.Headers.Location!).AbsolutePath);
             Assert.Equal(1, metadata.Calls);
 
-            using var login = await browser.PostAsJsonAsync(Api + "/login", new { username = "admin", password = Password });
-            Assert.True(login.IsSuccessStatusCode, await login.Content.ReadAsStringAsync());
+            using var login = await browser.PostAsJsonAsync(Api + "/login", new { username = "admin", password = Password }, cancellationToken: TestContext.Current.CancellationToken);
+            Assert.True(login.IsSuccessStatusCode, await login.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
             Assert.Contains(login.Headers.GetValues("Set-Cookie"), cookie => cookie.StartsWith("UMB_UCONTEXT=", StringComparison.Ordinal));
             await CompleteAuthorization(browser, continuation, callback, verifier);
             Assert.Equal(1, metadata.Calls);
@@ -108,9 +108,9 @@ public sealed class BackOfficeSsoHttpTests
         {
             var continuation = await OpenFallback(browser, authorize, challenge);
             Assert.Equal(2, metadata.Calls);
-            using var login = await browser.PostAsJsonAsync(Api + "/login", new { username = "admin", password = Password });
+            using var login = await browser.PostAsJsonAsync(Api + "/login", new { username = "admin", password = Password }, cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.PaymentRequired, login.StatusCode);
-            Assert.Contains(TestTwoFactorProvider.Name, await login.Content.ReadAsStringAsync());
+            Assert.Contains(TestTwoFactorProvider.Name, await login.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
             Assert.False(login.Headers.TryGetValues("Set-Cookie", out var cookies)
                 && cookies.Any(cookie => cookie.StartsWith("UMB_UCONTEXT=", StringComparison.Ordinal)));
             Assert.Equal(2, metadata.Calls);
@@ -118,8 +118,8 @@ public sealed class BackOfficeSsoHttpTests
             using var verify = await browser.PostAsJsonAsync(Api + "/verify-2fa", new
             {
                 provider = TestTwoFactorProvider.Name, code = TestTwoFactorProvider.Code, isPersistent = true, rememberClient = false,
-            });
-            Assert.True(verify.IsSuccessStatusCode, await verify.Content.ReadAsStringAsync());
+            }, cancellationToken: TestContext.Current.CancellationToken);
+            Assert.True(verify.IsSuccessStatusCode, await verify.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
             await CompleteAuthorization(browser, continuation, callback, verifier);
             Assert.Equal(2, metadata.Calls);
         }

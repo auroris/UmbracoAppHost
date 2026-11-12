@@ -91,7 +91,7 @@ public sealed class IdentityServerAutoLinkTests
                     return Results.Json(new { result.Succeeded, result.IsNotAllowed, result.IsLockedOut });
                 });
             },
-        });
+        }, TestContext.Current.CancellationToken);
 
         var schemes = await site.Services.GetRequiredService<IAuthenticationSchemeProvider>().GetAllSchemesAsync();
         Assert.DoesNotContain(schemes, scheme => scheme.Name is "Umbraco.Windows" or "UmbracoMembers.Windows" or "Negotiate");

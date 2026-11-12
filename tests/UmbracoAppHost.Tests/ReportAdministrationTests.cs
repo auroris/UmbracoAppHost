@@ -34,7 +34,7 @@ public sealed class ReportAdministrationTests
                 ["Accounts:MembersManagedBy"] = "Umbraco",
                 ["Accounts:EnsureUserGroups:0"] = ReportAdministratorGroup.Name,
             },
-        });
+        }, TestContext.Current.CancellationToken);
         using var scope = site.CreateScope();
         var services = scope.ServiceProvider;
         var groups = services.GetRequiredService<IUserGroupService>();

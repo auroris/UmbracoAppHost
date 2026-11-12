@@ -21,7 +21,7 @@ public sealed class TabularHttpTests
     [ResetPublishedContentServices]
     public async Task The_sample_orders_lines_block_reads_the_sample_data_and_both_shells_style_it()
     {
-        await using var site = await TestSite.StartAsync(new() { Application = typeof(Program).Assembly });
+        await using var site = await TestSite.StartAsync(new() { Application = typeof(Program).Assembly }, TestContext.Current.CancellationToken);
         await site.WaitForPublishedAsync(ApplicationStarter.FormPageKey);
         await site.WaitForPublishedAsync(WebsiteContentBlocksPage);
         var member = site.CreateMember("lines", "lines@example.invalid", "Lines member");
@@ -75,13 +75,13 @@ public sealed class TabularHttpTests
         // The page renders in the host's own template; both shells' stylesheets carry the block.
         using (var page = await site.GetPageAsync(client, "/orders-form/?id=4"))
         {
-            var html = await page.Content.ReadAsStringAsync();
+            var html = await page.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
             Assert.True(page.IsSuccessStatusCode, html);
             Assert.Contains("data-app-tabular", html);
             Assert.Contains($"data-api=\"{site.PathBase}/api/tabular/{ApplicationStarter.FormPageKey}/{ApplicationStarter.FormLinesBlockKey}\"", html);
         }
         foreach (var stylesheet in new[] { "/dist/css/app.css", "/dist/css/site.css" })
-            Assert.Contains(".ah-tabular__scroll", await client.GetStringAsync(site.PathBase + stylesheet));
+            Assert.Contains(".ah-tabular__scroll", await client.GetStringAsync(site.PathBase + stylesheet, TestContext.Current.CancellationToken));
     }
 
     /// <summary>The keys of an order's lines in the sample database, in key order.</summary>

@@ -24,11 +24,11 @@ public sealed class BlockLayoutsHttpTests
     [ResetPublishedContentServices]
     public async Task Layout_blocks_publish_and_render_their_areas_in_both_shells()
     {
-        await using var host = await TestSite.StartAsync(new TestSiteOptions { Application = typeof(Program).Assembly });
+        await using var host = await TestSite.StartAsync(new TestSiteOptions { Application = typeof(Program).Assembly }, TestContext.Current.CancellationToken);
         using var scope = host.CreateScope();
         var services = scope.ServiceProvider;
         var types = services.GetRequiredService<IContentTypeService>();
-        for (var i = 0; i < 100 && types.Get(ApplicationStarter.BlockPageAlias)?.AllowedTemplates?.Any() != true; i++) await Task.Delay(100);
+        for (var i = 0; i < 100 && types.Get(ApplicationStarter.BlockPageAlias)?.AllowedTemplates?.Any() != true; i++) await Task.Delay(100, TestContext.Current.CancellationToken);
         var contents = services.GetRequiredService<IContentService>();
 
         // First boot imported the demo page, and publishing it passed the block validation.
@@ -55,7 +55,7 @@ public sealed class BlockLayoutsHttpTests
 
         // The test login route signs the administrator in to the backoffice without a password.
         using var client = host.CreateClient();
-        (await client.GetAsync($"/__tests/login/{Constants.Security.SuperUserKey}?scheme=backoffice&name=Layout%20test")).EnsureSuccessStatusCode();
+        (await client.GetAsync($"/__tests/login/{Constants.Security.SuperUserKey}?scheme=backoffice&name=Layout%20test", TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
 
         var application = await Page(client, "/layouts/");
         Assert.Contains("<body class=\"app\">", application);
@@ -113,7 +113,7 @@ public sealed class BlockLayoutsHttpTests
             Assert.NotNull(paper);
             Assert.True(paper.Published);
             using var downloaded = await host.DownloadPaperReportAsync(client, paper.Key, "?id=1");
-            var print = await downloaded.Content.ReadAsStringAsync();
+            var print = await downloaded.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
             Assert.True(downloaded.IsSuccessStatusCode, print);
             Assert.Equal("text/html", downloaded.Content.Headers.ContentType?.MediaType);
             Assert.Contains(".html", downloaded.Content.Headers.ContentDisposition?.FileNameStar);
@@ -127,13 +127,13 @@ public sealed class BlockLayoutsHttpTests
             using var refused = await host.DownloadPaperReportAsync(anonymous, paper.Key, "?id=1");
             Assert.Equal(System.Net.HttpStatusCode.Forbidden, refused.StatusCode);
             Assert.Equal("application/problem+json", refused.Content.Headers.ContentType?.MediaType);
-            Assert.Contains("Sign in", await refused.Content.ReadAsStringAsync());
+            Assert.Contains("Sign in", await refused.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         }
 
         // Each shell's stylesheet carries Umbraco's grid arithmetic and styles the hooks.
         foreach (var stylesheet in new[] { "/dist/css/app.css", "/dist/css/site.css" })
         {
-            var css = await client.GetStringAsync(stylesheet);
+            var css = await client.GetStringAsync(stylesheet, TestContext.Current.CancellationToken);
             Assert.Contains(".umb-block-grid__area-container", css);
             Assert.Contains(".ah-layout>.ah-area", css);
             Assert.Contains(".ah-region__title", css);

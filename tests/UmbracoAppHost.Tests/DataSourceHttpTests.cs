@@ -24,7 +24,7 @@ public sealed class DataSourceHttpTests
     [ResetPublishedContentServices]
     public async Task Members_use_published_data_sources_through_the_form_endpoints()
     {
-        await using var site = await TestSite.StartAsync(new TestSiteOptions { Application = typeof(Program).Assembly });
+        await using var site = await TestSite.StartAsync(new TestSiteOptions { Application = typeof(Program).Assembly }, TestContext.Current.CancellationToken);
         using var scope = site.CreateScope(); var services = scope.ServiceProvider;
         var contents = services.GetRequiredService<IContentService>();
         await site.WaitForPublishedAsync(ApplicationStarter.FormPageKey);
@@ -68,7 +68,7 @@ public sealed class DataSourceHttpTests
             Assert.Same(regionList, lists.Lists["order-region"]);
         }
         var reportResponse = await reports.SchemaAsync("orders");
-        Assert.True(reportResponse.IsSuccessStatusCode, await reportResponse.Content.ReadAsStringAsync());
+        Assert.True(reportResponse.IsSuccessStatusCode, await reportResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
 
         // The sample Orders form runs on its registered C# class: defaults, create, update, stale save, delete.
         var start = Ok(await orders.LoadAsync());
@@ -159,7 +159,7 @@ public sealed class DataSourceHttpTests
         var reportRows = await reports.RowsAsync("pilot-note-report");
         Assert.Equal("Smooth flight", Assert.Single(reportRows.EnumerateArray()).GetProperty("BODY").GetString());
         // A page parameter can share a name with an adapter option without being overwritten by it.
-        var matching = (await Read(await client.GetAsync("/api/reports/pilot-note-report/default?pageSize=10&appPageQuery=" + Uri.EscapeDataString("?pageSize=Weather")))).GetProperty("result");
+        var matching = (await Read(await client.GetAsync("/api/reports/pilot-note-report/default?pageSize=10&appPageQuery=" + Uri.EscapeDataString("?pageSize=Weather"), TestContext.Current.CancellationToken))).GetProperty("result");
         Assert.Equal("Smooth flight", Assert.Single(matching.GetProperty("rows").EnumerateArray()).GetProperty("BODY").GetString());
         var otherRows = await reports.RowsAsync("pilot-note-report", "pageSize=10&appPageQuery=" + Uri.EscapeDataString("?pageSize=Fuel"));
         Assert.Empty(otherRows.EnumerateArray());
@@ -167,7 +167,7 @@ public sealed class DataSourceHttpTests
         foreach (var (topic, included) in new[] { ("Weather", true), ("Fuel", false) })
         {
             using var download = await reports.DownloadAsync("pilot-note-report", "csv", matching.GetProperty("document"), "appPageQuery=" + Uri.EscapeDataString("?pageSize=" + topic));
-            var csv = await download.Content.ReadAsStringAsync();
+            var csv = await download.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
             Assert.True(download.IsSuccessStatusCode, $"{(int)download.StatusCode}: {csv}");
             Assert.Equal(included, csv.Contains("Smooth flight", StringComparison.Ordinal));
             Assert.DoesNotContain("Somebody else", csv, StringComparison.Ordinal);
