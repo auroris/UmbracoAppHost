@@ -9,6 +9,7 @@ using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Services;
 using Umbraco.Extensions;
 using AppBlocks.Blocks;
+using AppBlocks.InteractiveReports.Blocks;
 using AppBlocks.Connections;
 using AppBlocks.Forms;
 using UmbracoAppHost.Application;
@@ -55,7 +56,7 @@ public sealed class BlocksHttpTests
         var forms = site.Forms(client, form.Key, ApplicationStarter.FormKey);
         var reports = site.Reports(client);
         var formUrl = $"{site.PathBase}/api/forms/{form.Key}/{ApplicationStarter.FormKey}";
-        var reportName = AppBlockContent.ReportName(report.Key, ApplicationStarter.ReportKey);
+        var reportName = ReportBlocks.Name(report.Key, ApplicationStarter.ReportKey);
         Assert.Equal(HttpStatusCode.Forbidden, (await forms.LoadAsync()).Response.StatusCode);
         Assert.False((await reports.SchemaAsync(reportName)).IsSuccessStatusCode);
         var loginHtml = await client.GetStringAsync(pageUrl);

@@ -5,7 +5,7 @@ namespace UmbracoAppHost.Testing;
 
 /// <summary>
 /// Reads reports through <c>/api/reports</c> and downloads them through <c>/api/download</c>, as the
-/// report viewer does. A report block's name is <c>AppBlockContent.ReportName(page, block)</c>; a
+/// report viewer does. A report block's name is <c>ReportBlocks.Name(page, block)</c>; a
 /// published report definition's is its alias.
 /// </summary>
 public sealed class ReportsClient(HttpClient client, string pathBase)

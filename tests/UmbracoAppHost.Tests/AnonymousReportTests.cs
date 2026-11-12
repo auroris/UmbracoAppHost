@@ -5,6 +5,7 @@ using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Services;
 using AppBlocks.Blocks;
+using AppBlocks.InteractiveReports.Blocks;
 using UmbracoAppHost.Application;
 
 namespace UmbracoAppHost.Tests;
@@ -46,7 +47,7 @@ public sealed class AnonymousReportTests
         page.SetValue(ApplicationStarter.BlockPropertyAlias, body.ToJsonString(), "en");
         Publish(contents, page);
 #pragma warning restore CS0618
-        var reportName = AppBlockContent.ReportName(page.Key, ApplicationStarter.ReportKey);
+        var reportName = ReportBlocks.Name(page.Key, ApplicationStarter.ReportKey);
         using var anonymous = site.CreateClient();
         var reports = site.Reports(anonymous);
 

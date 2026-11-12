@@ -9,6 +9,7 @@ using Umbraco.Cms.Core.Services;
 using UmbracoAppHost.Authentication;
 using AppBlocks.Authentication;
 using AppBlocks.InteractiveReports;
+using AppBlocks.InteractiveReports.Blocks;
 using AppBlocks.InteractiveReports.Reports;
 using AppBlocks.InteractiveReports.Setup;
 
@@ -55,7 +56,7 @@ public sealed class ReportAccessPolicy(
         if (user.Identity?.IsAuthenticated != true)
             return accounts.Value.AllowAnonymousReportBlocks && AnonymousReportAccess.Allows(request);
         // Published block settings own their starting view. Saved personal views remain available.
-        if (AppBlocks.Blocks.AppBlockContent.ParseReportName(request.Resource.ReportName, out _, out _)
+        if (ReportBlocks.ParseName(request.Resource.ReportName, out _, out _)
             && request.Action == InteractiveReportAction.SelectDefaultReport) return false;
 
         var isAdministrator = await IsAdministratorAsync(user);

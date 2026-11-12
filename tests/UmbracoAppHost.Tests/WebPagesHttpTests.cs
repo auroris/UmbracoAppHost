@@ -13,6 +13,7 @@ using Umbraco.Cms.Core.Services;
 using Umbraco.Cms.Core.Security;
 using Umbraco.Cms.Core.Strings;
 using AppBlocks.Blocks;
+using AppBlocks.InteractiveReports.Blocks;
 
 namespace UmbracoAppHost.Tests;
 
@@ -176,7 +177,7 @@ public sealed class WebPagesHttpTests
 
         var formKeys = WebPageTestContent.Blocks(english, "appForm").Select(block => Guid.Parse(block["key"]!.GetValue<string>())).ToArray();
         var reportKey = Guid.Parse(WebPageTestContent.Blocks(english, "appReport").Single()["key"]!.GetValue<string>());
-        var reportUrl = "/api/reports/" + AppBlockContent.ReportName(mixed.Key, reportKey) + "/default";
+        var reportUrl = "/api/reports/" + ReportBlocks.Name(mixed.Key, reportKey) + "/default";
         Assert.False((await anonymous.GetAsync(reportUrl + "?appCulture=en")).IsSuccessStatusCode);
         foreach (var formKey in formKeys)
         {
