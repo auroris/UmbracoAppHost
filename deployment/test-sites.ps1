@@ -1,3 +1,4 @@
+#Requires -Version 7.0
 # Integration checks for the site scripts: creates two disposable sites from one build, boots both, then
 # updates one and verifies what an update preserves and what it refreshes. Run from the checkout to
 # publish a fresh build, or pass -Build.
@@ -7,6 +8,7 @@ param(
     [string] $OutputRoot = (Join-Path ([IO.Path]::GetTempPath()) ('apphost-site-test-' + [guid]::NewGuid().ToString('N'))),
     [string[]] $MsBuildProperties = @()
 )
+$ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot SiteTools.ps1)
 $scripts = Split-Path -Parent $PSScriptRoot
 $published = Resolve-Build $scripts $Build '' '' $MsBuildProperties

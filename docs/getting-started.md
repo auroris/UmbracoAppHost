@@ -389,7 +389,7 @@ self-contained build folder with the application, the scripts and both exports t
 `app/uSync/`, and creates a site from it:
 
 ```powershell
-.\new-site.ps1 -Project <repository>\src\MyHost.Web\MyHost.Web.csproj -Name MyHost -Destination E:/Sites/MyHost
+pwsh -File ./new-site.ps1 -Project <repository>\src\MyHost.Web\MyHost.Web.csproj -Name MyHost -Destination E:/Sites/MyHost
 ```
 
 `-Assembly` names the application's file when it is not the project's name with `.dll`, and

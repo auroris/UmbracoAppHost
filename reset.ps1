@@ -1,3 +1,4 @@
+#Requires -Version 7.0
 # Resets the reference instance. Stop the website in Visual Studio, run this, then press Play: the next
 # start installs a fresh database, imports the saved uSync export and creates new administrator credentials.
 # Backoffice edits that were exported to reference/uSync but not copied into the saved export are listed,
@@ -10,6 +11,7 @@ param(
     [string] $InstanceRoot = (Join-Path $PSScriptRoot reference),
     [switch] $Force
 )
+$ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'deployment/SiteTools.ps1')
 $InstanceRoot = [IO.Path]::GetFullPath($InstanceRoot)
 if (!(Test-Path -LiteralPath $InstanceRoot)) { Write-Host "Nothing to reset: $InstanceRoot does not exist."; return }

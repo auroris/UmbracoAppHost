@@ -1,3 +1,4 @@
+#Requires -Version 7.0
 # Updates an existing site from the reference: publishes the application (or reuses a build with -Build),
 # swaps it in while preserving the site's settings, data, media and content, and refreshes the shared
 # uSync definitions in the site's uSync folder, removing its copies of what AppBlocks now installs itself. Import them
@@ -10,6 +11,7 @@ param(
     [string] $Assembly,
     [string[]] $MsBuildProperties = @()
 )
+$ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'deployment/SiteTools.ps1')
 $siteRoot = (Resolve-Path -LiteralPath $Site).Path
 $statePath = Get-SafePath $siteRoot '.apphost/instance.json'

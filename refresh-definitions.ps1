@@ -1,9 +1,11 @@
+#Requires -Version 7.0
 # Copies the library's definition folders over a host's working uSync folder after the host was rebuilt, for an
 # import from the backoffice, and removes its copies of what AppBlocks installs itself. The source is the export in the
 # host's build output, which runtime.json names; the instance's content and the host's own files are left alone. The
 # host may be running.
 [CmdletBinding(SupportsShouldProcess)]
 param([Parameter(Mandatory)] [string] $Instance)
+$ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'deployment/SiteTools.ps1')
 $Instance = [IO.Path]::GetFullPath($Instance)
 $runtimePath = Join-Path $Instance '.apphost/runtime.json'

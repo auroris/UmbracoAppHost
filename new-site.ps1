@@ -1,3 +1,4 @@
+#Requires -Version 7.0
 # Creates an independent site from the reference: publishes the application (or reuses a build with
 # -Build), copies it, generates the site's identity and credentials, and copies the saved uSync export
 # into the site's uSync folder. The site's first start installs Umbraco and imports that export.
@@ -11,6 +12,7 @@ param(
     [string] $Assembly,
     [string[]] $MsBuildProperties = @()
 )
+$ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'deployment/SiteTools.ps1')
 $siteRoot = [IO.Path]::GetFullPath($Destination)
 if (Test-Path -LiteralPath $siteRoot) { throw "Destination already exists: $siteRoot" }

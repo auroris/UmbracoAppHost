@@ -74,8 +74,11 @@ controllers, UmbNav integration and form/report backoffice extensions all target
 
 ## Create a site
 
+Run the scripts with PowerShell 7 (`pwsh`). Windows PowerShell 5.1 (`powershell.exe`) cannot
+run them; keep the `pwsh -File` prefix when invoking them from that shell.
+
 ```powershell
-pwsh new-site.ps1 -Name MyWebsite -Destination E:/Sites/MyWebsite
+pwsh -File new-site.ps1 -Name MyWebsite -Destination E:/Sites/MyWebsite
 pwsh E:/Sites/MyWebsite/start-site.ps1
 ```
 
