@@ -13,7 +13,6 @@
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
     <AppBlocksRoot Condition="'$(AppBlocksRoot)' == ''">$(MSBuildThisFileDirectory)..\..\..\AppBlocks</AppBlocksRoot>
     <IdentityServerRoot Condition="'$(IdentityServerRoot)' == ''">$(MSBuildThisFileDirectory)..\..\..\IdentityServer</IdentityServerRoot>
-    <ApplicationVirtualPathFixRoot Condition="'$(ApplicationVirtualPathFixRoot)' == ''">$(MSBuildThisFileDirectory)..\..\..\UmbracoApplicationVirtualPathFix</ApplicationVirtualPathFixRoot>
     <!-- App_Plugins and the login images must sit at the site root, not under /_content/UmbracoAppHost/. -->
     <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
     <Description>A shared base for Umbraco sites: single sign-on and account policy, application blocks and Interactive Reports, website and application themes, virtual-path hosting, and the workarounds for upstream Umbraco gaps.</Description>
@@ -42,6 +41,7 @@
   <ItemGroup>
     <!-- Common to every site built on the base; a site gets these transitively. -->
     <PackageReference Include="Umbraco.Cms" />
+    <PackageReference Include="AurorisNet.Umbraco.ApplicationVirtualPathFix" />
     <PackageReference Include="Umbraco.Cms.DevelopmentMode.Backoffice" />
     <PackageReference Include="Umbraco.Community.UmbNav" />
     <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
@@ -52,7 +52,6 @@
 
   <ItemGroup>
     <!-- AppBlocks owns forms/data sources; its optional companion supplies interactive reports. -->
-    <ProjectReference Include="$(ApplicationVirtualPathFixRoot)\src\AurorisNet.Umbraco.ApplicationVirtualPathFix\AurorisNet.Umbraco.ApplicationVirtualPathFix.csproj" />
     <ProjectReference Include="$(AppBlocksRoot)\src\AppBlocks\AppBlocks.csproj" />
     <ProjectReference Include="$(AppBlocksRoot)\src\AppBlocks.InteractiveReports\AppBlocks.InteractiveReports.csproj" />
     <!-- The built-in server and Negotiate package come from the sibling core library; picker lookup code is local. -->

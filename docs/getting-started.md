@@ -18,7 +18,7 @@ Open `UmbracoAppHost.slnx` in Visual Studio and use the **Website** launch profi
 **Website** once from the Play dropdown.
 
 The first build restores and builds both the frontend and Interactive Reports' browser assets
-automatically. Building from source requires the .NET 10 SDK, Node 20 or newer, and five sibling
+automatically. Building from source requires the .NET 10 SDK, Node 20 or newer, and four sibling
 checkouts next to this repository's folder:
 
 | Checkout | Provides |
@@ -27,10 +27,12 @@ checkouts next to this repository's folder:
 | `..\Interactive-Reports` | Interactive Reports, compiled through `AppBlocks.InteractiveReports` with its browser assets |
 | `..\IdentityServer` | `IdentityServer.Core` for the built-in identity server, including its `ActiveDirectory` dependency. |
 | `..\Pressroom` | `Pressroom.Client`, used by `AppBlocks.Documents` for paper-report rendering. |
-| `..\UmbracoApplicationVirtualPathFix` | `AurorisNet.Umbraco.ApplicationVirtualPathFix`, providing the backoffice virtual-path and token fixes. |
 
 To build against checkouts elsewhere, pass their folders as MSBuild properties, for example
-`dotnet build -p:AppBlocksRoot=D:\src\AppBlocks -p:InteractiveReportsRoot=D:\src\Interactive-Reports -p:IdentityServerRoot=D:\src\IdentityServer -p:PressroomRoot=D:\src\Pressroom -p:ApplicationVirtualPathFixRoot=D:\src\UmbracoApplicationVirtualPathFix`.
+`dotnet build -p:AppBlocksRoot=D:\src\AppBlocks -p:InteractiveReportsRoot=D:\src\Interactive-Reports -p:IdentityServerRoot=D:\src\IdentityServer -p:PressroomRoot=D:\src\Pressroom`.
+The backoffice virtual-path fixes come from the `AurorisNet.Umbraco.ApplicationVirtualPathFix`
+NuGet package. Its version is pinned beside `Umbraco.Cms` in `Directory.Packages.props` and must
+target the same Umbraco version; no local checkout of that package is required.
 The required people-search and account-lookup code is the site's own, in
 `src/UmbracoAppHost/DirectoryAccounts/Lookup/`.
 Later builds reuse the frontend outputs until their sources change.
@@ -299,15 +301,15 @@ umbraco-package-schema.json
 
 ### Build and press Play
 
-The library's project file finds AppBlocks, Interactive Reports, IdentityServer, Pressroom and UmbracoApplicationVirtualPathFix in
+The library's project file finds AppBlocks, Interactive Reports, IdentityServer and Pressroom in
 sibling checkouts next to the UmbracoAppHost checkout (`..\AppBlocks`, `..\Interactive-Reports`,
-`..\IdentityServer`, `..\Pressroom`, `..\UmbracoApplicationVirtualPathFix`). When they are elsewhere, pass their folders to every build:
+`..\IdentityServer`, `..\Pressroom`). When they are elsewhere, pass their folders to every build:
 
 ```powershell
 dotnet build src\MyHost.Web -p:InteractiveReportsRoot=D:\src\Interactive-Reports
 ```
 
-`AppBlocksRoot`, `IdentityServerRoot`, `PressroomRoot` and `ApplicationVirtualPathFixRoot` do the same for the other four. Visual Studio passes no
+`AppBlocksRoot`, `IdentityServerRoot` and `PressroomRoot` do the same for the other three. Visual Studio passes no
 such properties; set them as environment variables before starting it, or keep the checkouts side
 by side.
 
@@ -476,7 +478,7 @@ for one project. xUnit v3 supplies the test runner and Visual Studio Test Explor
 The host defaults exclude `xunit.*` assemblies from Umbraco's plugin discovery: xUnit ships
 runner-only dependencies beside the test executable that are not application dependencies.
 
-Browser regression tests for virtual-path hosting live in the sibling
+Browser regression tests for virtual-path hosting live in the separate
 `UmbracoApplicationVirtualPathFix` repository. That suite owns the Playwright dependency and
 browser installation, and checks native login, dashboard loading, assets, token renewal and
 console errors on plain Umbraco. See the

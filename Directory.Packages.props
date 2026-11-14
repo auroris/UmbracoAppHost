@@ -11,6 +11,8 @@
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.15" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.15" />
     <PackageVersion Include="Umbraco.Cms" Version="18.3.1" />
+    <!-- This release targets exactly Umbraco 18.3.1; update both together. -->
+    <PackageVersion Include="AurorisNet.Umbraco.ApplicationVirtualPathFix" Version="18.3.1.1" />
     <PackageVersion Include="Umbraco.Cms.DevelopmentMode.Backoffice" Version="18.3.1" />
     <PackageVersion Include="Umbraco.Community.UmbNav" Version="5.0.3" />
     <PackageVersion Include="uSync" Version="18.3.1" />

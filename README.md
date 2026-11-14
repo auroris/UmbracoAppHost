@@ -158,14 +158,13 @@ without this checkout. Sites need only the ASP.NET Core 10 runtime. Their settin
 uSync folder sit outside `app/` and survive updates. Upgrade Umbraco and plugins in this checkout,
 verify them in the reference, then update the sites; their database upgrades run at the next start.
 
-AppBlocks, Interactive Reports, IdentityServer, Pressroom and UmbracoApplicationVirtualPathFix remain independent sibling checkouts; the build
+AppBlocks, Interactive Reports, IdentityServer and Pressroom remain independent sibling checkouts; the build
 compiles their libraries and published sites carry the resulting assemblies. IdentityServer supplies
 `IdentityServer.Core` for the embedded OpenID Connect server, with its `ActiveDirectory` dependency.
 The people-picker lookup code is in `src/UmbracoAppHost/DirectoryAccounts/Lookup/`; it is compiled locally
 and needs no separate directory project.
-The default locations are `..\AppBlocks`, `..\Interactive-Reports`, `..\IdentityServer`, `..\Pressroom`
-and `..\UmbracoApplicationVirtualPathFix`; `AppBlocksRoot`, `InteractiveReportsRoot`, `IdentityServerRoot`,
-`PressroomRoot` and `ApplicationVirtualPathFixRoot` override them. No separate
+The default locations are `..\AppBlocks`, `..\Interactive-Reports`, `..\IdentityServer` and `..\Pressroom`;
+`AppBlocksRoot`, `InteractiveReportsRoot`, `IdentityServerRoot` and `PressroomRoot` override them. No separate
 IdentityServer process or deployed sibling checkout is needed. The public frontend is built once and includes
 both shells, with Razor templates targeting Umbraco 18 directly. A branded site brings its theme as
 a library of its own; see [Themes](docs/design-blocks-and-data-sources.md#1-themes).
@@ -1339,7 +1338,7 @@ include that folder in the instance's backup policy.
 backoffice included, under a prefix. Umbraco strips it from incoming URLs before content
 routing and prepends it to the links it generates. The independent MIT-licensed
 [`AurorisNet.Umbraco.ApplicationVirtualPathFix`](https://github.com/auroris/UmbracoApplicationVirtualPathFix)
-package, included by AppHost, applies
+package, restored from NuGet by AppHost, applies
 it with `UsePathBase`, which strips the prefix when the request still carries it and is a no-op
 when the host has already moved it into the path base, as an IIS child application does, and
 prefixes the three `Umbraco:CMS:Security:AuthorizeCallback*PathName` settings so OpenIddict
@@ -1368,6 +1367,8 @@ includes the package build in the asset hash so a deployment replaces cached, un
 and report endpoints are excluded from HTML rewriting. The login-script patch targets Umbraco
 18.3.1 and must be checked alongside these browser tests when upgrading Umbraco. The package
 uses one branch per exact Umbraco version and adds a local revision, such as `18.3.1.1`.
+AppHost pins the published package in `Directory.Packages.props`; update it alongside `Umbraco.Cms`
+when upgrading. Building AppHost does not require a checkout of the fix repository.
 
 The Playwright suite lives in `UmbracoApplicationVirtualPathFix` and uses plain Umbraco without
 AppHost, AppBlocks or IdentityServer. AppHost's existing `WelcomeReportTests` cover its report's
