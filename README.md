@@ -158,13 +158,14 @@ without this checkout. Sites need only the ASP.NET Core 10 runtime. Their settin
 uSync folder sit outside `app/` and survive updates. Upgrade Umbraco and plugins in this checkout,
 verify them in the reference, then update the sites; their database upgrades run at the next start.
 
-AppBlocks, Interactive Reports, IdentityServer and Pressroom remain independent sibling checkouts; the build
+AppBlocks, Interactive Reports, IdentityServer, Pressroom and UmbracoApplicationVirtualPathFix remain independent sibling checkouts; the build
 compiles their libraries and published sites carry the resulting assemblies. IdentityServer supplies
 `IdentityServer.Core` for the embedded OpenID Connect server, with its `ActiveDirectory` dependency.
 The people-picker lookup code is in `src/UmbracoAppHost/DirectoryAccounts/Lookup/`; it is compiled locally
 and needs no separate directory project.
-The default locations are `..\AppBlocks`, `..\Interactive-Reports`, `..\IdentityServer` and `..\Pressroom`;
-`AppBlocksRoot`, `InteractiveReportsRoot`, `IdentityServerRoot` and `PressroomRoot` override them. No separate
+The default locations are `..\AppBlocks`, `..\Interactive-Reports`, `..\IdentityServer`, `..\Pressroom`
+and `..\UmbracoApplicationVirtualPathFix`; `AppBlocksRoot`, `InteractiveReportsRoot`, `IdentityServerRoot`,
+`PressroomRoot` and `ApplicationVirtualPathFixRoot` override them. No separate
 IdentityServer process or deployed sibling checkout is needed. The public frontend is built once and includes
 both shells, with Razor templates targeting Umbraco 18 directly. A branded site brings its theme as
 a library of its own; see [Themes](docs/design-blocks-and-data-sources.md#1-themes).
@@ -1336,31 +1337,44 @@ include that folder in the instance's backup policy.
 
 `Umbraco:CMS:Hosting:ApplicationVirtualPath` (for example `/portal`) hosts the whole site,
 backoffice included, under a prefix. Umbraco strips it from incoming URLs before content
-routing and prepends it to the links it generates. The base's `VirtualPathHosting.cs` also applies
+routing and prepends it to the links it generates. The independent MIT-licensed
+[`AurorisNet.Umbraco.ApplicationVirtualPathFix`](https://github.com/auroris/UmbracoApplicationVirtualPathFix)
+package, included by AppHost, applies
 it with `UsePathBase`, which strips the prefix when the request still carries it and is a no-op
 when the host has already moved it into the path base, as an IIS child application does, and
 prefixes the three `Umbraco:CMS:Security:AuthorizeCallback*PathName` settings so OpenIddict
 registers the prefixed OAuth callback. The URLs that report definitions emit get the prefix as
 well (see [Interactive Reports](#interactive-reports)). One setting covers both hosting styles.
 
-Umbraco 18.1.1 assumes the backoffice lives at `{origin}/umbraco` in several places, and
-the base's `Overrides/` closes each gap:
+Umbraco 18.3.1 still assumes the backoffice lives at `{origin}/umbraco` in several places.
+The package registers automatically through its composer and pipeline filter to close each gap:
 
 | Upstream gap | Symptom | Workaround |
 |---|---|---|
 | The rewrite that serves the cache-busted backoffice assets matches `{virtual path}/umbraco/backoffice/{hash}/` against a request path that has already had the path base removed | Every backoffice script and stylesheet returns 404 and the page stays blank | `BackOfficeAssetsUnderPathBase` puts the virtual directory back onto those requests before Umbraco's pipeline sees them |
-| The import map is emitted with root-absolute entries, and the hashed prefix is only applied when the virtual path is `/` | Core modules are imported unhashed from `/umbraco/backoffice/...`, package modules from `/App_Plugins/...`, and uSync's modules load twice and fail to register | `BackOfficeImportMapUnderVirtualPathComposer` decorates `IPackageManifestService` so every root-absolute entry carries the virtual path before Umbraco adds the hash |
+| The import map is emitted with root-absolute entries, and the hashed prefix is only applied when the virtual path is `/` | Core modules are imported unhashed from `/umbraco/backoffice/...`, package modules from `/App_Plugins/...`, and uSync's modules load twice and fail to register | `ApplicationVirtualPathFixComposer` decorates `IPackageManifestService` so every root-absolute entry carries the virtual path before Umbraco adds the hash |
 | The backoffice SPA hard-codes `window.location.origin` plus `/umbraco` for its management API, OAuth callback and post-login navigation | Sign-in leaves the prefix: the callback lands on `/umbraco/oauth_complete` and the token exchange fails | `BackOfficeAppUnderVirtualPath` adds the `server-url` and `backoffice-path` attributes the app element accepts to the served page, because this project's Razor setup cannot override the precompiled view |
+| The slim login script uses the origin for public manifests and root-absolute login and two-factor endpoints | The login page reports 404 errors when the root belongs to another application | `BackOfficeAppUnderVirtualPath` patches those URLs in the served login script; its URL also includes the package build identifier to invalidate the unpatched cached script |
+| The header's Umbraco logo uses a root-absolute asset URL | The dashboard logs a 404 even after sign-in succeeds | The served header module resolves the logo relative to its own module URL, preserving the prefix and asset hash |
+| Startup attempts a token refresh before the browser has received a refresh-token cookie, including on the OAuth callback | Successful fresh sign-ins still report HTTP 400 and token-request errors | The import map wraps `UmbAuthContext` so initial refresh runs only when the server reports cookie presence; existing sessions and later renewal still use Umbraco's token validation |
 
-Tested under `/wing` on Kestrel over HTTPS with only that setting: the content page,
-the backoffice login, IdentityServer SSO, the content editor, the management API, SignalR and
-`/wing/api/reports` all work under the prefix with no console errors. Two requests still use
-root-absolute URLs compiled into Umbraco's scripts: the login page fetches the public package
-manifests from `/umbraco/management/api/...`, and the SPA loads its logo from
-`/umbraco/backoffice/assets/`. Behind Kestrel, or a reverse proxy that also forwards the root,
-both succeed; in an IIS child application they would not, which costs the logo and, untested,
-possibly the login page. All workarounds do nothing when no virtual path is configured and become
-redundant once the gaps are fixed upstream. The asset symptom is also reported for 17.2.1 on the
+The package's standalone browser tests cover the root and `/SomeTestPath` on Kestrel, with requests
+outside the prefix returning 404. They check native login, the populated Umbraco news dashboard,
+the logo and session renewal after reload, and fail on every browser console error or uncaught
+JavaScript exception. They also exercise an existing path base as supplied by an IIS child application.
+The initial-refresh fix also applies at the root. Token values remain in
+HTTP-only cookies; the HTML contains only their presence and is not cached. `BackOfficePaths`
+includes the package build in the asset hash so a deployment replaces cached, unpatched modules. WebSocket upgrades
+and report endpoints are excluded from HTML rewriting. The login-script patch targets Umbraco
+18.3.1 and must be checked alongside these browser tests when upgrading Umbraco. The package
+uses one branch per exact Umbraco version and adds a local revision, such as `18.3.1.1`.
+
+The Playwright suite lives in `UmbracoApplicationVirtualPathFix` and uses plain Umbraco without
+AppHost, AppBlocks or IdentityServer. AppHost's existing `WelcomeReportTests` cover its report's
+paging, prefixed edit links and content permissions over HTTP.
+
+Earlier manual checks also covered IdentityServer SSO and the content editor under `/wing` over
+HTTPS; the browser test uses native login and HTTP. The asset symptom is also reported for 17.2.1 on the
 [Umbraco forum](https://forum.umbraco.com/t/umbraco-backoffice-17-not-working-when-deployed-as-an-application-under-main-site-in-iis/7677).
 
 ## Telemetry

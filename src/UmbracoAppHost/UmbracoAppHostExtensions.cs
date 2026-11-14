@@ -11,7 +11,6 @@ using Umbraco.Cms.Core.Security;
 using Umbraco.Cms.Web.Common.ApplicationBuilder;
 using UmbracoAppHost.Authentication;
 using UmbracoAppHost.DirectoryAccounts;
-using UmbracoAppHost.Overrides;
 using AppBlocks.InteractiveReports.Reports;
 using UmbracoAppHost.Reports;
 using AppBlocks.Blocks;
@@ -154,7 +153,6 @@ public static class UmbracoAppHostExtensions
         builder.Services.AddSingleton<ConfiguredAdminPassword>();
         builder.Services.AddHostedService(services => services.GetRequiredService<ConfiguredAdminPassword>());
         builder.AddNotificationAsyncHandler<UmbracoApplicationStartedNotification, ConfiguredAdminPasswordStartup>();
-        builder.Services.AddVirtualPathHosting(configuration);
         return builder;
     }
 
@@ -174,13 +172,7 @@ public static class UmbracoAppHostExtensions
         if (app.Services.GetService<AppHostInstance>() is { } instance)
             app.Logger.LogInformation("Site data: {DataRoot}. Initial administrator credentials: {SettingsPath}",
                 instance.Root, instance.SettingsPath);
-        app.UseVirtualPathBase();
         await app.BootUmbracoAsync();
-
-        // Umbraco 18.1.1 neither finds its backoffice assets nor keeps the SPA inside the prefix
-        // under a path base; see Overrides/.
-        app.UseBackOfficeAssetsUnderPathBase();
-        app.UseBackOfficeAppUnderVirtualPath();
 
         app.UseUmbraco()
             .WithMiddleware(u =>
